@@ -1207,9 +1207,9 @@
         var ld = { '@context': 'https://schema.org', '@type': 'Product', name: judul, sku: x.kode, description: x.deskripsi || deskripsi, image: x.foto.map(function (f) { return L.situs() + f.src; }),
             offers: { '@type': 'Offer', url: url, price: x.harga, priceCurrency: 'IDR', availability: 'https://schema.org/' + (x.status === 'dipesan' ? 'LimitedAvailability' : 'InStock'),
                 itemCondition: 'https://schema.org/' + (x.kondisi === 'bekas' ? 'UsedCondition' : 'NewCondition'), seller: { '@type': 'Organization', name: C.toko.nama } } };
-        return '<!DOCTYPE html>\n<html lang="id">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
             '<title>' + e(judul) + ' | ' + e(C.toko.nama) + ' Bogor</title>\n<meta name="description" content="' + e(deskripsi) + '">\n<link rel="canonical" href="' + e(url) + '">\n' +
-            '<meta property="og:type" content="product">\n<meta property="og:locale" content="id_ID">\n<meta property="og:site_name" content="' + e(C.toko.nama) + '">\n' +
+            '<meta property="og:type" content="product">\n<meta property="og:locale" content="en_US">\n<meta property="og:site_name" content="' + e(C.toko.nama) + '">\n' +
             '<meta property="og:title" content="' + e(judul + ' – ' + L.rupiah(x.harga)) + '">\n<meta property="og:description" content="' + e(deskripsi) + '">\n<meta property="og:url" content="' + e(url) + '">\n' +
             '<meta property="og:image" content="' + e(gambar) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:image" content="' + e(gambar) + '">\n' +
             '<script type="application/ld+json">' + JSON.stringify(ld).split('<').join('\\u003c') + '</script>\n' +

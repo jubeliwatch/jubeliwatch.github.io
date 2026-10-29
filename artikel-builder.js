@@ -7,7 +7,7 @@
     function slugAman(a) { if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(a && a.slug || ''))) throw new Error('The article page address is not valid: only lowercase letters, numbers, and hyphens.'); return a.slug; }
     function jalurAman(p) { return /^foto\/artikel\/[a-z0-9]+\.(webp|jpg)$/.test(String(p || '')); }
     function fotoValid(a) { return (Array.isArray(a.foto) ? a.foto : []).filter(function (f) { return f && jalurAman(f.path); }); }
-    function bulan(ts) { return new Date(ts || Date.now()).toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }); }
+    function bulan(ts) { return new Date(ts || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }); }
     function tanggal(ts) { return new Date(ts || Date.now()).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' }); } /* YYYY-MM-DD */
     function deskripsi(a) {
         var d = String(a.ringkasan || '').trim() || md.teksPolos(a.isi);
@@ -16,7 +16,7 @@
     function halaman(tpl, a, situs) {
         var url = situs + 'journal-' + slugAman(a) + '.html', foto = fotoValid(a), desk = deskripsi(a);
         var ld = {
-            '@context': 'https://schema.org', '@type': 'Article', headline: a.judul.slice(0, 110), description: desk, inLanguage: 'id',
+            '@context': 'https://schema.org', '@type': 'Article', headline: a.judul.slice(0, 110), description: desk, inLanguage: 'en',
             datePublished: a.terbit_at || undefined, dateModified: a.updated_at || a.terbit_at || undefined, mainEntityOfPage: url,
             image: foto.length ? foto.map(function (f) { return situs + f.path; }) : undefined,
             author: { '@type': 'Organization', name: 'Jubeliwatch', url: situs },
@@ -37,7 +37,7 @@
             OG_IMAGE: foto.length ? '    <meta property="og:image" content="' + esc(situs + foto[0].path) + '">\n    <meta name="twitter:card" content="summary_large_image">'
                 : '    <meta property="og:image" content="' + esc(situs + 'icon-512.png') + '">\n    <meta property="og:image:width" content="512">\n    <meta property="og:image:height" content="512">\n    <meta name="twitter:card" content="summary">',
             LDJSON: JSON.stringify(ld, null, 2).replace(/</g, '\\u003c'),
-            SAMPUL: foto.length ? fig(foto[0], 'article-photo container container--article', false) : '',
+            SAMPUL: foto.length ? fig(foto[0], 'article-photo', false) : '',
             ISI: md.keHtml(a.isi).split('\n').map(function (l) { return '                ' + l; }).join('\n'),
             GALERI: foto.length > 1 ? '                <div class="article-gallery">\n' + foto.slice(1).map(function (f) { return fig(f, 'article-gallery__item', true); }).join('\n') + '\n                </div>' : '',
             WA_TEKS: esc('?text=' + encodeURIComponent('Hello Jubeliwatch, I read the article "' + a.judul + '" and would like advice about my watch'))
