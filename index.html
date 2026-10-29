@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Jubeliwatch — Time, well kept.</title>
+    <meta name="description" content="Jubeliwatch: vintage and pre-owned watches in Bogor. Buy, sell, consign, and service, with honest condition grades and online repair status.">
+    <link rel="canonical" href="https://jubeliwatch.github.io/">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="Jubeliwatch">
+    <meta property="og:title" content="Jubeliwatch — Time, well kept.">
+    <meta property="og:description" content="Vintage and pre-owned watches, chosen with care.">
+    <meta property="og:url" content="https://jubeliwatch.github.io/">
+    <meta property="og:image" content="https://jubeliwatch.github.io/icon-512.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#f4f0e8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400..800&display=swap">
+    <link rel="stylesheet" href="theme-dark.css">
+    <link rel="stylesheet" href="style-artikel.css">
+    <link rel="stylesheet" href="layanan.css">
+    <style>
+        .hm-eyebrow { margin: 0 0 10px; font-size: .75rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); }
+        .hm-h2 { margin: 0; font: 500 clamp(1.9rem, 1.4rem + 2vw, 2.6rem)/1.1 var(--font-display); letter-spacing: -.02em; }
+        .hm-lead { max-width: 30rem; color: var(--ink-3); line-height: 1.8; }
+        .hm-link { font-size: .8125rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--accent-2); padding-bottom: 4px; }
+        #konten { padding-bottom: var(--tabbar-h); }
+        .hm-hero { display: grid; gap: 32px; align-items: center; padding-block: calc(var(--header-h) + clamp(28px, 6vw, 72px)) clamp(40px, 7vw, 88px); }
+        @media (min-width: 860px) { .hm-hero { grid-template-columns: 1fr 1.05fr; gap: 56px; } }
+        .hm-title { margin: 8px 0 18px; font: 500 clamp(3rem, 2rem + 4vw, 4.8rem)/1 var(--font-display); letter-spacing: -.035em; }
+        .hm-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+        .hm-hero__art { position: relative; display: grid; place-items: center; min-height: 340px; border-radius: var(--r-lg); overflow: hidden;
+            background: radial-gradient(60% 55% at 50% 45%, rgba(173, 137, 81, .35), transparent 70%), linear-gradient(160deg, #5c684d, #343b2b); }
+        .hm-dial { position: relative; width: min(62%, 260px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #f6f1e6 0 62%, #e6dcc8 63%);
+            box-shadow: 0 0 0 10px #c9b48a, 0 0 0 13px #8e7444, 0 30px 60px -20px rgba(0, 0, 0, .6); }
+        .hm-dial__mark { position: absolute; inset: 9%; border-radius: 50%; background: repeating-conic-gradient(from -1deg, #282820 0 2deg, transparent 2deg 30deg);
+            -webkit-mask: radial-gradient(circle, transparent 0 83%, #000 84%); mask: radial-gradient(circle, transparent 0 83%, #000 84%); }
+        .hm-hand { position: absolute; left: 50%; bottom: 50%; transform-origin: 50% 100%; border-radius: 3px; background: #282820; }
+        .hm-hand--h { width: 6px; height: 26%; margin-left: -3px; transform: rotate(-60deg); }
+        .hm-hand--m { width: 4px; height: 38%; margin-left: -2px; transform: rotate(48deg); }
+        .hm-hand--s { width: 2px; height: 40%; margin-left: -1px; background: #ad8951; animation: hm-tick 60s steps(60) infinite; }
+        .hm-pin { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px; border-radius: 50%; background: #ad8951; }
+        @keyframes hm-tick { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .hm-hand--s { animation: none; } }
+        .hm-hero__note { position: absolute; left: 22px; bottom: 16px; margin: 0; color: #f4f0e8; font: italic 1.05rem var(--font-display); }
+        .hm-section { padding-block: clamp(48px, 7vw, 80px); }
+        .hm-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; justify-content: space-between; margin-bottom: 26px; }
+        .hm-band { padding-block: clamp(48px, 7vw, 80px); background: var(--bg-alt); }
+        .hm-services { display: grid; gap: 28px; margin-top: 34px; }
+        @media (min-width: 860px) { .hm-services { grid-template-columns: repeat(3, 1fr); gap: 36px; } }
+        .hm-service { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line-strong); }
+        .hm-service__num { font: italic 1.6rem var(--font-display); color: var(--accent-2); }
+        .hm-service h3 { margin: 0; font: 500 1.35rem var(--font-display); }
+        .hm-service p { margin: 0 0 6px; color: var(--ink-3); line-height: 1.75; font-size: .9375rem; }
+        .hm-journal { display: grid; gap: 18px; }
+        .hm-journal:has(.article-card) + .hm-journal__empty { display: none; }
+        .article-card { display: grid; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); transition: transform .5s var(--ease-out), box-shadow .5s var(--ease-out); }
+        @media (min-width: 640px) { .article-card { grid-template-columns: minmax(200px, 38%) 1fr; } }
+        .article-card__thumb { display: grid; place-items: center; min-height: 170px; overflow: hidden; background: linear-gradient(160deg, #5c684d, #343b2b); }
+        .article-card__thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .article-card__body { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 24px; }
+        .article-card .tag { font-size: .6875rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2); }
+        .article-card__title { margin: 0; font: 600 clamp(1.125rem, 1rem + .5vw, 1.375rem)/1.35 var(--font-display); }
+        .article-card__excerpt { margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink-2); }
+        .article-card__more { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent); }
+        .article-card__more .ic { width: 18px; height: 18px; }
+        @media (hover: hover) { .article-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); } }
+        .hm-visit { padding-block: clamp(48px, 7vw, 80px); background: #556047; color: #f4f0e8; }
+        .hm-visit .hm-eyebrow { color: #d7bd8c; }
+        .hm-visit .hm-lead { color: #dedbcf; }
+        .hm-visit__in { display: grid; gap: 28px; }
+        @media (min-width: 860px) { .hm-visit__in { grid-template-columns: 1.1fr 1fr; align-items: center; } }
+        .hm-visit__info { display: grid; gap: 16px; margin: 0; }
+        .hm-visit__info dt { font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: #d7bd8c; }
+        .hm-visit__info dd { margin: 4px 0 0; font-size: 1.0625rem; }
+        .hm-visit__info a { color: inherit; border-bottom: 1px solid #d7bd8c; }
+    </style>
+    <script>document.documentElement.classList.add('js');</script>
+    <script src="theme.js"></script>
+    <script src="util.js"></script>
+    <script src="pwa.js" defer></script>
+    <script src="site.js" defer></script>
+    <script src="home.js" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#konten">Skip to content</a>
+
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="g-pick" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9B567"/><stop offset="1" stop-color="#9E5A0C"/></linearGradient>
+            <linearGradient id="g-bone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FCF8EF"/><stop offset=".55" stop-color="#EDE2CE"/><stop offset="1" stop-color="#CDBB9E"/></linearGradient>
+            <linearGradient id="g-brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBE3A0"/><stop offset=".35" stop-color="#E2B055"/><stop offset=".72" stop-color="#B7832E"/><stop offset="1" stop-color="#7F5719"/></linearGradient>
+            <linearGradient id="g-horn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#655850"/><stop offset=".4" stop-color="#2E2621"/><stop offset="1" stop-color="#120E0B"/></linearGradient>
+        </defs>
+        <symbol id="nut" viewBox="0 0 240 64"><path d="M6 58V26q0-10 10-10h15l2 8h4l2-8h26.4l1.8 8h3.6l1.8-8h27.2l1.6 8h3.2l1.6-8h28l1.4 8h2.8l1.4-8h28.8l1.2 8h2.4l1.2-8H203l1 8h2l1-8h17q10 0 10 10v32q0 4-4 4H10q-4 0-4-4z"/></symbol>
+        <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.5 3.5a4.5 4.5 0 0 0-4.2 6.1l-6.1 6.1a1.9 1.9 0 0 0 2.7 2.7l6.1-6.1a4.5 4.5 0 0 0 6.1-5.5l-2.6 2.6-2.6-.7-.7-2.6 2.6-2.6a4.5 4.5 0 0 0-1.3-.2z"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></symbol>
+        <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+        <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.6V4.5a1 1 0 0 1 1-1h8.1l8 8a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.5"/></symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-11.2 6.5L4 19.5l1.5-4.6A7.5 7.5 0 1 1 20 11.5z"/></symbol>
+        <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 14 3.6-4.4"/><circle cx="12" cy="14" r="1.4"/></symbol>
+        <symbol id="i-wa" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52s.198-.298.298-.497c.099-.198.05-.371-.025-.52s-.669-1.612-.916-2.207c-.242-.579-.487-.5-.669-.51a13 13 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074s2.096 3.2 5.077 4.487c.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413s.248-1.289.173-1.413c-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.82 11.82 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.9 11.9 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413"/></symbol>
+        <symbol id="i-ig" viewBox="0 0 24 24"><path d="M7.03.084c-1.277.06-2.149.264-2.91.563a5.9 5.9 0 0 0-2.124 1.388 5.9 5.9 0 0 0-1.38 2.127C.321 4.926.12 5.8.064 7.076s-.069 1.688-.063 4.947.021 3.667.083 4.947c.061 1.277.264 2.149.563 2.911.308.789.72 1.457 1.388 2.123a5.9 5.9 0 0 0 2.129 1.38c.763.295 1.636.496 2.913.552 1.278.056 1.689.069 4.947.063s3.668-.021 4.947-.082c1.28-.06 2.147-.265 2.91-.563a5.9 5.9 0 0 0 2.123-1.388 5.9 5.9 0 0 0 1.38-2.129c.295-.763.496-1.636.551-2.912.056-1.28.07-1.69.063-4.948-.006-3.258-.02-3.667-.081-4.947-.06-1.28-.264-2.148-.564-2.911a5.9 5.9 0 0 0-1.387-2.123 5.86 5.86 0 0 0-2.128-1.38C19.074.322 18.202.12 16.924.066 15.647.009 15.236-.006 11.977 0S8.31.021 7.03.084m.14 21.693c-1.17-.05-1.805-.245-2.228-.408a3.7 3.7 0 0 1-1.382-.895 3.7 3.7 0 0 1-.9-1.378c-.165-.423-.363-1.058-.417-2.228-.06-1.264-.072-1.644-.08-4.848-.006-3.204.006-3.583.061-4.848.05-1.169.246-1.805.408-2.228.216-.561.477-.96.895-1.382a3.7 3.7 0 0 1 1.379-.9c.423-.165 1.057-.361 2.227-.417 1.265-.06 1.644-.072 4.848-.08 3.203-.006 3.583.006 4.85.062 1.168.05 1.804.244 2.227.408.56.216.96.475 1.382.895s.681.817.9 1.378c.165.422.362 1.056.417 2.227.06 1.265.074 1.645.08 4.848.005 3.203-.006 3.583-.061 4.848-.051 1.17-.245 1.805-.408 2.23-.216.56-.477.96-.896 1.38a3.7 3.7 0 0 1-1.378.9c-.422.165-1.058.362-2.226.418-1.266.06-1.645.072-4.85.079s-3.582-.006-4.848-.06m9.783-16.192a1.44 1.44 0 1 0 1.437-1.442 1.44 1.44 0 0 0-1.437 1.442M5.839 12.012a6.161 6.161 0 1 0 12.323-.024 6.162 6.162 0 0 0-12.323.024M8 12.008A4 4 0 1 1 12.008 16 4 4 0 0 1 8 12.008"/></symbol>
+        <symbol id="i-shopee" viewBox="0 0 24 24"><path d="M15.941 17.963c.23-1.879-.98-3.077-4.175-4.097-1.548-.528-2.277-1.22-2.26-2.171.065-1.056 1.048-1.825 2.352-1.85a5.3 5.3 0 0 1 2.883.89c.116.072.197.06.263-.04.09-.144.315-.493.39-.62.051-.08.061-.186-.068-.28-.185-.137-.704-.415-.983-.532a6.5 6.5 0 0 0-2.511-.514c-1.91.008-3.413 1.215-3.54 2.826q-.122 1.746 1.73 2.827c.263.152 1.68.716 2.244.892 1.774.552 2.695 1.542 2.478 2.697-.197 1.047-1.299 1.724-2.818 1.744-1.203-.046-2.287-.537-3.127-1.19l-.141-.11c-.104-.08-.218-.075-.287.03-.05.077-.376.547-.458.67-.077.108-.035.168.045.234.35.293.817.613 1.134.775a6.7 6.7 0 0 0 2.829.727 4.9 4.9 0 0 0 2.075-.354c1.095-.465 1.803-1.394 1.945-2.554M12 1.401c-2.068 0-3.754 1.95-3.833 4.39h7.665C15.751 3.35 14.066 1.4 12 1.4m7.851 22.598-.08.001-15.784-.002c-1.074-.04-1.863-.91-1.971-1.991l-.01-.195-.707-15.526a.46.46 0 0 1 .45-.494h4.975C6.845 2.568 9.16 0 12 0s5.153 2.569 5.275 5.79h4.968a.46.46 0 0 1 .458.483l-.773 15.588-.007.131c-.094 1.094-.979 1.977-2.07 2.006z"/></symbol>
+        <symbol id="i-tokopedia" viewBox="0 0 448 512"><path d="M160 80c0-35.3 28.7-64 64-64s64 28.7 64 64v48H160zm-48 48H48c-26.5 0-48 21.5-48 48v208c0 53 43 96 96 96h256c53 0 96-43 96-96V176c0-26.5-21.5-48-48-48h-64V80c0-61.9-50.1-112-112-112S112 18.1 112 80zm24 48a24 24 0 1 1 0 48 24 24 0 1 1 0-48m152 24a24 24 0 1 1 48 0 24 24 0 1 1-48 0"/></symbol>
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></symbol>
+        <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m14 7 3 3"/></symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></symbol>
+        <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M7 11H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18 11h-1"/></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z"/></symbol>
+    </svg>
+
+    <header class="site-header">
+        <nav class="nav container" aria-label="Main navigation">
+            <a href="index.html" class="brand" aria-label="Jubeliwatch, home">
+                <span class="brand__mark" aria-hidden="true"></span>
+                <span class="brand__name">jubeli<span class="text-accent">watch</span></span>
+            </a>
+            <ul class="nav__links">
+                <li><a href="index.html" class="nav__link">Home</a></li>
+                <li><a href="collection.html" class="nav__link">Collection</a></li>
+                <li><a href="index.html#services" class="nav__link">Services</a></li>
+                <li><a href="index.html#journal" class="nav__link">Journal</a></li>
+                <li><a href="repair-status.html" class="nav__link">Repair status</a></li>
+            </ul>
+            <div class="nav__actions">
+                <a href="https://wa.me/6285795738637" target="_blank" rel="noopener" class="btn btn--wa btn--sm nav__cta">
+                    <svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg> <span class="nav__cta-label">WhatsApp us</span>
+                </a>
+                <button id="menu-btn" type="button" class="icon-btn nav__toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+                    <svg class="ic ic--menu" aria-hidden="true"><use href="#i-menu"/></svg>
+                    <svg class="ic ic--close" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="mobile-menu">
+            <ul class="mobile-menu__list container">
+                <li style="--i:0"><a href="index.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></span>Home<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:1"><a href="collection.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg></span>Collection<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:2"><a href="index.html#services" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg></span>Services<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:3"><a href="index.html#journal" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg></span>Journal<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:4"><a href="repair-status.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-gauge"/></svg></span>Repair status<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:5"><a href="#kontak" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg></span>Contact<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main id="konten">
+        <section class="hm-hero container">
+            <div class="hm-hero__copy">
+                <p class="hm-eyebrow">Vintage &amp; pre-owned timepieces · Bogor, Indonesia</p>
+                <h1 class="hm-title">Time,<br>well kept.</h1>
+                <p class="hm-lead">A small, considered collection of watches. Each piece chosen for its character, checked with patience, and ready for its next chapter.</p>
+                <div class="hm-actions">
+                    <a href="collection.html" class="btn btn--dark btn--lg">Explore the collection</a>
+                    <a href="#services" class="btn btn--ghost btn--lg">Our services</a>
+                </div>
+            </div>
+            <div class="hm-hero__art" aria-hidden="true">
+                <div class="hm-dial">
+                    <span class="hm-dial__mark"></span>
+                    <span class="hm-hand hm-hand--h"></span><span class="hm-hand hm-hand--m"></span><span class="hm-hand hm-hand--s"></span><span class="hm-pin"></span>
+                </div>
+                <p class="hm-hero__note">Objects that keep their stories.</p>
+            </div>
+        </section>
+
+        <section id="collection" class="hm-section container">
+            <div class="hm-head">
+                <div><p class="hm-eyebrow">The collection</p><h2 class="hm-h2">Find your forever watch.</h2></div>
+                <a href="collection.html" class="hm-link">View all pieces ›</a>
+            </div>
+            <div class="kat-grid" id="hm-koleksi"><p class="ly-muted">Loading the collection&hellip;</p></div>
+        </section>
+
+        <section id="services" class="hm-band">
+            <div class="container">
+                <p class="hm-eyebrow">Made to last</p>
+                <h2 class="hm-h2">Buy, sell, service.</h2>
+                <div class="hm-services">
+                    <article class="hm-service">
+                        <span class="hm-service__num">01</span>
+                        <h3>Buy a watch</h3>
+                        <p>Thoughtfully sourced pieces with honest condition grades. Hold one with a deposit and pay the balance later.</p>
+                        <a class="hm-link" href="collection.html">Browse the collection ›</a>
+                    </article>
+                    <article class="hm-service">
+                        <span class="hm-service__num">02</span>
+                        <h3>Sell, consign, or buy back</h3>
+                        <p>We buy watches outright, sell them for you on consignment, or buy with a right to buy back at the same price. Everything is agreed in writing.</p>
+                        <a class="hm-link" href="https://wa.me/6285795738637?text=Hello%20Jubeliwatch%2C%20I%20would%20like%20to%20sell%20or%20consign%20a%20watch" target="_blank" rel="noopener">Tell us about your watch ›</a>
+                    </article>
+                    <article class="hm-service">
+                        <span class="hm-service__num">03</span>
+                        <h3>Service &amp; repair</h3>
+                        <p>From a fresh battery to a full mechanical service. Follow every step online with your service code, including before and after photos.</p>
+                        <a class="hm-link" href="repair-status.html">Check a repair status ›</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="journal" class="hm-section container">
+            <div class="hm-head">
+                <div><p class="hm-eyebrow">Journal</p><h2 class="hm-h2">Stories from the bench.</h2></div>
+            </div>
+            <div class="hm-journal" id="hm-journal">
+                <!-- ARTIKEL-OTOMATIS:MULAI (filled in automatically by the POS Journal) -->
+                <!-- ARTIKEL-OTOMATIS:SELESAI -->
+            </div>
+            <p class="ly-muted hm-journal__empty">New stories are on their way.</p>
+        </section>
+
+        <section class="hm-visit">
+            <div class="container hm-visit__in">
+                <div>
+                    <p class="hm-eyebrow">Visit or write</p>
+                    <h2 class="hm-h2">Looking for something special?</h2>
+                    <p class="hm-lead">Tell us what’s on your wrist, or what you hope will be.</p>
+                </div>
+                <dl class="hm-visit__info">
+                    <div><dt>Address</dt><dd>Jln. Jabaru II, Bojong Baru, Pasirkuda, Kota Bogor</dd></div>
+                    <div><dt>Opening hours</dt><dd>Mon–Sun 12.00–19.00 (Friday from 13.00)</dd></div>
+                    <div><dt>WhatsApp</dt><dd><a href="https://wa.me/6285795738637" target="_blank" rel="noopener">+62 857-9573-8637</a></dd></div>
+                </dl>
+            </div>
+        </section>
+    </main>
+
+    <footer id="kontak" class="site-footer">
+        <div class="container footer__grid">
+            <div class="footer__brand">
+                <a href="index.html" class="brand">
+                    <span class="brand__mark" aria-hidden="true"></span>
+                    <span class="brand__name">jubeli<span class="text-accent">watch</span></span>
+                </a>
+                <p class="footer__desc">Vintage and pre-owned watches, chosen with care. Buy, sell, consign, and service.</p>
+            </div>
+            <div class="footer__col">
+                <h3 class="footer__title">Contact</h3>
+                <ul class="footer__list">
+                    <li><a href="https://wa.me/6285795738637" target="_blank" rel="noopener" class="footer__link"><span class="footer__icon footer__icon--wa"><svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg></span>WhatsApp +62 857-9573-8637</a></li>
+                    <li><a href="https://instagram.com/jubeliwatch" target="_blank" rel="noopener" class="footer__link"><span class="footer__icon footer__icon--ig"><svg class="ic ic--fill" aria-hidden="true"><use href="#i-ig"/></svg></span>@jubeliwatch</a></li>
+                    <li><a href="mailto:jubeliwatch@gmail.com" class="footer__link"><span class="footer__icon"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg></span>jubeliwatch@gmail.com</a></li>
+                </ul>
+            </div>
+            <div class="footer__col">
+                <h3 class="footer__title">Explore</h3>
+                <ul class="footer__list footer__list--plain">
+                    <li><a href="collection.html" class="footer__link">Collection</a></li>
+                    <li><a href="index.html#services" class="footer__link">Services</a></li>
+                    <li><a href="index.html#journal" class="footer__link">Journal</a></li>
+                    <li><a href="repair-status.html" class="footer__link">Repair status</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="container footer__bottom">
+            <p>&copy; 2026 Jubeliwatch. Time, well kept.</p>
+            <a href="#" class="footer__top">Back to top <svg class="ic" aria-hidden="true"><use href="#i-arrow-up"/></svg></a>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/6285795738637" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" class="fab-wa">
+        <svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg>
+    </a>
+
+    <nav class="tabbar" aria-label="Quick links">
+        <a href="index.html" class="tabbar__item"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span></a>
+        <a href="collection.html" class="tabbar__item"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg><span>Collection</span></a>
+        <a href="https://wa.me/6285795738637" target="_blank" rel="noopener" class="tabbar__wa">
+            <span class="tabbar__wa-btn"><svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg></span><span>WhatsApp</span>
+        </a>
+        <a href="repair-status.html" class="tabbar__item"><svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg><span>Repairs</span></a>
+        <a href="index.html#journal" class="tabbar__item"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg><span>Journal</span></a>
+    </nav>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Local-only files: never publish
+backup-old-ayrigitar-site/
+.codex-remote-attachments/
+node_modules/
+.claude/

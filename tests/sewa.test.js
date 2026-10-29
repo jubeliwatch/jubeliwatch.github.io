@@ -1,0 +1,153 @@
+'use strict';
+/* Sewa gitar: tarif, deposit, penutupan sewa (potongan deposit), penyimpanan, dan unit yang sedang disewa. */
+const test = require('node:test'), assert = require('node:assert/strict');
+const { bikinGitHub, siapkanRepo, bikinPerangkat, stokContoh, hariIni } = require('./helper');
+
+async function mulai(o) {
+    o = o || {};
+    const gh = siapkanRepo(bikinGitHub(), { data: o.data, owner: o.owner, situs: o.situs });
+    const d = bikinPerangkat(gh);
+    await d.masuk();
+    return { gh, d, A: d.A, L: d.L };
+}
+const sewaContoh = (L, ekstra) => Object.assign({
+    nama: 'Rian', hp: '081234567890', stok_id: 's1', stok_kode: 'STK-S1', nama_barang: 'Gitar Akustik Yamaha F310', tgl_mulai: hariIni(), hari: 3,
+    biaya_custom: 300000, deposit_rencana: 500000, status: 'aktif', bayar: []
+}, ekstra || {});
+
+test('tarif sewa standar: 100/150/175 ribu, lalu +25 ribu per hari, 7 hari 300 ribu, sesudahnya +25 ribu', async () => {
+    const { L } = await mulai();
+    assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 10, 14].map((h) => L.tarifSewa(h)), [100000, 150000, 175000, 200000, 225000, 250000, 300000, 325000, 375000, 475000]);
+    assert.equal(L.tarifSewa(0), 0);
+});
+
+test('deposit awal: 10% harga jual gitar (dibulatkan 5 ribu); unit di bawah 2 juta memakai tarif standar', async () => {
+    const { L } = await mulai();
+    assert.equal(L.depositAwal(1500000), 150000);
+    assert.equal(L.depositAwal(13000000), 1300000);
+    assert.equal(L.depositAwal(1234000), 125000);
+    assert.equal(L.depositAwal(0), 0);
+    assert.equal(L.tarifStandarUnit({ harga_jual: 1999000 }), true);
+    assert.equal(L.tarifStandarUnit({ harga_jual: 2000000 }), false, '2 juta ke atas: isi manual');
+    assert.match(L.ringkasTarifSewa(), /1 day Rp100\.000, 2 days Rp150\.000, 3 days Rp175\.000, then \+Rp25\.000 per day; 7 days Rp300\.000/);
+});
+
+test('hitung sewa: telat dihitung tambahan hari, harga custom ikut, kembali lebih awal tidak mengurangi', async () => {
+    const { L } = await mulai();
+    const mulaiTgl = L.tambahHari(hariIni(), -5);
+    const w = sewaContoh(L, { tgl_mulai: mulaiTgl, hari: 3, biaya_custom: null });
+    assert.equal(L.infoSewa(w).hariTelat, 2);
+    assert.equal(L.hitungSewa(w).hari, 4, '5 hari dipakai dikurangi toleransi 1 hari');
+    assert.equal(L.hitungSewa(w).tarif, 200000, 'tarif standar 4 hari');
+    /* telat 1 hari masih dalam toleransi 24 jam: tidak ada biaya tambahan */
+    const dalamToleransi = sewaContoh(L, { tgl_mulai: L.tambahHari(hariIni(), -4), hari: 3, biaya_custom: null });
+    assert.deepEqual([L.infoSewa(dalamToleransi).hariTelat, L.infoSewa(dalamToleransi).kenaBiaya, L.hitungSewa(dalamToleransi).hari], [1, false, 3]);
+    assert.equal(L.infoSewa(w).kenaBiaya, true);
+    assert.match(L.pesanSewa.pengingat(dalamToleransi), /24-hour grace period/);
+    /* harga custom 3 hari = 300 ribu: hari lebihnya ditambah selisih tarif standar (200 - 175 = 25 ribu) */
+    assert.equal(L.hitungSewa(sewaContoh(L, { tgl_mulai: mulaiTgl, hari: 3, biaya_custom: 300000 })).tarif, 325000);
+    const awal = sewaContoh(L, { tgl_mulai: mulaiTgl, hari: 3, status: 'selesai', tgl_kembali: L.tambahHari(mulaiTgl, 1) });
+    assert.equal(L.hitungSewa(awal).hari, 3, 'kembali hari ke-1, tetap ditagih 3 hari');
+    assert.equal(L.batasSewa(w), L.tambahHari(mulaiTgl, 3));
+});
+
+test('penutupan sewa: kekurangan dan ganti rugi diambil dari deposit, sisanya dikembalikan', async () => {
+    const { L } = await mulai();
+    const bayar = [{ jumlah: 300000, jenis: 'sewa' }, { jumlah: 500000, jenis: 'deposit' }];
+    let w = sewaContoh(L, { bayar, status: 'selesai', tgl_kembali: L.tambahHari(hariIni(), 0), ganti_rugi: 150000 });
+    let h = L.hitungSewa(w);
+    assert.deepEqual([h.tagihan, h.potongDeposit, h.harusKembali, h.masihHutang], [450000, 150000, 350000, 0]);
+    /* ganti rugi melebihi deposit: penyewa masih berhutang selisihnya */
+    w = Object.assign({}, w, { ganti_rugi: 900000 });
+    h = L.hitungSewa(w);
+    assert.deepEqual([h.potongDeposit, h.harusKembali, h.masihHutang], [500000, 0, 400000]);
+    /* setelah penutupan dicatat (potong + kembali) hitungannya tetap sama dan deposit tidak tersisa */
+    const tutup = sewaContoh(L, { status: 'selesai', tgl_kembali: hariIni(), ganti_rugi: 150000, bayar: bayar.concat([{ jumlah: 150000, jenis: 'deposit_potong' }, { jumlah: 350000, jenis: 'deposit_kembali' }]) });
+    h = L.hitungSewa(tutup);
+    assert.deepEqual([h.ditahan, h.potongDeposit, h.harusKembali, h.masihHutang, h.kurang], [0, 0, 0, 0, 0]);
+});
+
+test('simpan sewa: kode SWA, tersimpan di repo bersama tanpa mengubah stok, unit yang disewa tidak bisa disewa lagi', async () => {
+    const { gh, A, L } = await mulai({ data: { 'stok.json': JSON.stringify([stokContoh('s1', 1)]) } });
+    const s = A.daftar('stok')[0];
+    assert.equal(L.bisaDisewa(s, A.daftar('sewa')), true);
+    const r = await A.simpanSewa(sewaContoh(L, { bayar: [{ id: 'b1', tgl: hariIni(), jumlah: 300000, jenis: 'sewa', metode: 'tunai' }, { id: 'b2', tgl: hariIni(), jumlah: 500000, jenis: 'deposit', metode: 'tunai' }] }), []);
+    assert.match(r.kode, /^SWA-[A-Z0-9]{6}$/);
+    assert.equal(gh.json('jubeliwatch-shop-data', 'sewa.json').length, 1);
+    assert.equal(gh.json('jubeliwatch-shop-data', 'stok.json')[0].jumlah, 1, 'stok tidak berkurang');
+    assert.equal(L.bisaDisewa(A.daftar('stok')[0], A.daftar('sewa')), false, 'sedang disewa');
+    assert.equal(L.sewaAktifStok('s1', A.daftar('sewa')).id, r.id);
+    /* selesai: unit bisa disewa lagi */
+    const r2 = await A.simpanSewa(Object.assign({}, r, { status: 'selesai', tgl_kembali: hariIni() }), []);
+    assert.equal(r2.id, r.id);
+    assert.equal(gh.json('jubeliwatch-shop-data', 'sewa.json').length, 1);
+    assert.equal(L.bisaDisewa(A.daftar('stok')[0], A.daftar('sewa')), true);
+    await A.hapusSewa(r2);
+    assert.equal(gh.json('jubeliwatch-shop-data', 'sewa.json').length, 0);
+});
+
+test('gitar baru, aksesoris, atau stok habis tidak bisa disewakan', async () => {
+    const { L } = await mulai();
+    assert.equal(L.bisaDisewa(stokContoh('a', 1, { kondisi: 'baru' }), []), false);
+    assert.equal(L.bisaDisewa(stokContoh('b', 1, { kategori: 'aksesoris' }), []), false);
+    assert.equal(L.bisaDisewa(stokContoh('c', 0), []), false);
+    assert.equal(L.bisaDisewa(stokContoh('d', 1, { status: 'ditarik' }), []), false);
+    assert.equal(L.bisaDisewa(stokContoh('e', 1), []), true);
+});
+
+test('pesan WA sewa memuat batas kembali, deposit, dan ketentuan; pengingat membedakan telat', async () => {
+    const { L } = await mulai();
+    const w = sewaContoh(L, { kode: 'SWA-ABC123', bayar: [{ jumlah: 300000, jenis: 'sewa' }, { jumlah: 500000, jenis: 'deposit' }] });
+    const m = L.pesanSewa.mulai(w);
+    assert.match(m, /SWA-ABC123/); assert.match(m, /Terms:\n1\. /); assert.match(m, /AGREE/); assert.match(m, /opening hours: /); assert.match(m, /24-hour/); assert.match(m, /24-hour grace period/);
+    assert.ok(m.includes(L.tglPanjang(L.batasSewa(w))), 'tanggal batas kembali ada di ketentuan');
+    assert.ok(m.includes(L.rupiah(500000)), 'deposit disebut');
+    const telat = sewaContoh(L, { kode: 'SWA-ABC123', tgl_mulai: L.tambahHari(hariIni(), -5) });
+    assert.match(L.pesanSewa.pengingat(telat), /late by 2 days/);
+    assert.equal(L.perluIngatSewa(telat), true);
+    assert.equal(L.perluIngatSewa(Object.assign({}, telat, { pengingat: [hariIni()] })), false, 'sudah diingatkan hari ini');
+    assert.equal(L.perluIngatSewa(sewaContoh(L, { hari: 10 })), false, 'masih lama');
+});
+
+test('struk sewa 58 mm memuat kode, batas kembali, deposit', async () => {
+    const { L } = await mulai();
+    const teks = L.strukSewa(sewaContoh(L, { kode: 'SWA-ABC123', bayar: [{ jumlah: 300000, jenis: 'sewa' }, { jumlah: 500000, jenis: 'deposit' }] })).map((x) => x.t).join('\n');
+    assert.match(teks, /WATCH RENTAL RECEIPT/); assert.match(teks, /SWA-ABC123/); assert.match(teks, /Deposit received/);
+});
+
+test('pesan untuk calon penyewa dipisah: unit (tanpa ketentuan), ketentuan, formulir, pembayaran', async () => {
+    const { L } = await mulai();
+    const unit = stokContoh('s1', 1, { harga_jual: 1500000, foto: [{ id: 'f1', repo: 'publik', path: 'foto/stok/a.webp' }, { id: 'f2', repo: 'privat', path: 'x' }] });
+    const w = { nama_barang: 'Gitar Akustik Yamaha F310 – Used Very Good', deposit_rencana: 150000, biaya_custom: 175000, hari: 3 };
+    const u = L.pesanSewa.calon.unit(unit, w);
+    assert.ok(u.startsWith('⌚ *Gitar Akustik Yamaha F310 – Used Very Good*'), 'tanpa sapaan: bisa dikirim berurutan untuk beberapa unit');
+    assert.ok(u.includes('1 day Rp100.000 · 2 days Rp150.000 · 3 days Rp175.000 · 7 days Rp300.000 (each extra day +Rp25.000)'));
+    assert.ok(u.includes('Deposit: Rp150.000') && u.includes('/unit/STK-S1.html'));
+    assert.ok(!u.includes('Terms') && !u.includes('AGREE'), 'ketentuan tidak ikut di pesan unit');
+    /* unit yang tidak tampil di katalog: foto publik ditautkan langsung, foto privat tidak */
+    const tersembunyi = L.pesanSewa.calon.unit(Object.assign({}, unit, { tampil: false }), w);
+    assert.ok(tersembunyi.includes('foto/stok/a.webp') && !tersembunyi.includes('privat') && !tersembunyi.includes('/unit/'));
+    /* unit Rp2 juta ke atas: estimasi tidak distandarkan */
+    const mahal = L.pesanSewa.calon.unit(stokContoh('s2', 1, { harga_jual: 13000000 }), { nama_barang: 'Bass Fender', deposit_rencana: 1300000 });
+    assert.ok(mahal.includes('we will quote based on the rental length') && !mahal.includes('1 day Rp100.000'));
+    const k = L.pesanSewa.calon.ketentuan();
+    assert.match(k, /^Watch rental terms at /); assert.match(k, /\n1\. /); assert.match(k, /10% of the watch price/); assert.match(k, /AGREE/);
+    const f = L.pesanSewa.calon.formulir(unit, w);
+    assert.ok(f.includes('Full name:') && f.includes('WhatsApp number:') && f.includes('Watch to rent: Gitar Akustik Yamaha F310') && f.includes('Rental length (days):'));
+    const b = L.pesanSewa.calon.bayar(unit, w);
+    assert.ok(b.includes('Rental fee (3 days): Rp175.000') && b.includes('Deposit: Rp150.000') && b.includes('Total paid upfront: Rp325.000') && b.includes('BCA'));
+    [u, k, f, b].forEach((t) => assert.ok(!/undefined|[{]/.test(t), 'tidak ada placeholder tersisa'));
+});
+
+test('pesan calon pelanggan servis: estimasi dari jasa terpilih, ketentuan sekali saja tanpa data pelanggan', async () => {
+    const { L } = await mulai();
+    const s = { arloji_jenis: 'Akustik', arloji_merk: 'Taylor 214ce', diskon: 0, bayar: [], items: [{ jenis: 'jasa', nama: 'Full Setup (Akustik)', harga: 350000, qty: 1 }, { jenis: 'part', nama: 'Senar Elixir 12', harga: 180000, qty: 1 }] };
+    const e = L.pesan.calon.estimasi(s);
+    assert.ok(e.startsWith('Service estimate Taylor 214ce:'));
+    assert.ok(e.includes('• Full Setup (Akustik) – Rp350.000') && e.includes('• Senar Elixir 12 – Rp180.000'));
+    assert.ok(e.includes('*Estimated total: Rp530.000*') && e.includes('(deposit 50% of work + parts in full): *Rp355.000*'));
+    const k = L.pesan.calon.ketentuan();
+    assert.match(k, /^Service terms at /); assert.match(k, /\n1\. Work starts once we receive a 50% deposit/); assert.match(k, /AGREE/);
+    assert.ok(!k.includes('this receipt'), 'tidak menyebut "this receipt" sebelum ada nota');
+    [e, k].forEach((t) => assert.ok(!/undefined|[{]/.test(t), 'tidak ada placeholder tersisa'));
+});

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>Page not found | Jubeliwatch</title>
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+    <meta name="theme-color" content="#f4f0e8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400..800&display=swap">
+    <!-- Alamat absolut: halaman ini bisa tampil di URL mana pun -->
+    <link rel="stylesheet" href="/theme-dark.css">
+    <style>
+        /* Khusus halaman 404 (token & komponen dari theme-dark.css) */
+        body.page-404 { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; padding-bottom: 0; }
+        .page-404 .site-header::before { opacity: 1; }
+        .page-404 .site-header { border-bottom-color: var(--line); }
+        .nf {
+            position: relative; isolation: isolate; overflow: hidden;
+            display: flex; flex: 1; align-items: center; justify-content: center;
+            padding: calc(var(--header-h) + env(safe-area-inset-top) + 2rem) var(--gutter) calc(2.5rem + env(safe-area-inset-bottom));
+            text-align: center;
+        }
+        .nf::before {
+            content: ""; position: absolute; inset: 0; z-index: -1;
+            background:
+                radial-gradient(50% 45% at 50% 30%, rgba(208, 138, 46, .18), transparent 70%),
+                radial-gradient(40% 40% at 10% 90%, rgba(18, 128, 77, .06), transparent 70%);
+        }
+        .nf__inner { max-width: 34rem; }
+        .nf__code {
+            display: inline-flex; align-items: center; gap: .04em;
+            font: 600 clamp(6rem, 4rem + 12vw, 10rem)/1 var(--font-display); letter-spacing: -.04em;
+            color: var(--ink);
+            animation: rise .9s var(--ease-out) backwards;
+        }
+        .nf__hole { width: .74em; height: .9em; margin: 0 .02em; overflow: visible; }
+        .nf__hole .ring { fill: none; stroke: var(--accent); stroke-width: 5; }
+        .nf__hole .ring2 { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: .7; }
+        .nf__hole .well { fill: #1A120C; }
+        .nf__hole .str { stroke: #D9D4CC; stroke-linecap: round; }
+        .nf__hole .snap { fill: none; stroke: #D9D4CC; stroke-linecap: round; transform-box: fill-box; animation: sway 2.8s var(--ease) infinite; }
+        .nf__hole .snap--b { transform-origin: 50% 100%; animation-delay: -1.4s; }
+        .nf__hole .snap--t { transform-origin: 50% 0%; }
+        .nf h1 {
+            margin-top: .75rem;
+            font: 600 clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem)/1.15 var(--font-display); letter-spacing: -.02em;
+            animation: rise .9s var(--ease-out) .08s backwards;
+        }
+        .nf__text { margin-top: .75rem; font-size: 1.0625rem; line-height: 1.6; color: var(--ink-2); animation: rise .9s var(--ease-out) .14s backwards; }
+        .nf__actions { display: flex; flex-direction: column; gap: 10px; margin-top: 1.75rem; animation: rise .9s var(--ease-out) .2s backwards; }
+        .nf__more { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 1.75rem; animation: rise .9s var(--ease-out) .26s backwards; }
+        .nf__more-label { width: 100%; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+        @media (min-width: 480px) { .nf__actions { flex-direction: row; justify-content: center; } }
+        @keyframes sway { 0%, 100% { rotate: 0deg; } 50% { rotate: 6deg; } }
+    </style>
+    <script>document.documentElement.classList.add('js');</script>
+    <script>
+        /* tautan unit/STK-XXXX.html yang halaman pratinjaunya belum ada: tetap dibuka lewat unit.html */
+        (function () { var m = /^\/unit\/([A-Za-z0-9-]+)\.html$/.exec(location.pathname); if (m) location.replace('/unit.html?k=' + m[1]); })();
+    </script>
+    <script src="/theme.js"></script>
+    <script src="/site.js" defer></script>
+</head>
+<body class="page-404">
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="g-pick" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9B567"/><stop offset="1" stop-color="#9E5A0C"/></linearGradient>
+        </defs>
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></symbol>
+        <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 17a8 8 0 1 1 15 0"/><path d="m12 14 3.6-4.4"/><circle cx="12" cy="14" r="1.4"/></symbol>
+    </svg>
+
+    <header class="site-header">
+        <nav class="nav container" aria-label="Main navigation">
+            <a href="index.html" class="brand" aria-label="Jubeliwatch, home">
+                <span class="brand__mark" aria-hidden="true"></span>
+                <span class="brand__name">jubeli<span class="text-accent">watch</span></span>
+            </a>
+            <ul class="nav__links">
+                <li><a href="index.html" class="nav__link">Home</a></li>
+                <li><a href="collection.html" class="nav__link">Collection</a></li>
+                <li><a href="index.html#services" class="nav__link">Services</a></li>
+                <li><a href="index.html#journal" class="nav__link">Journal</a></li>
+                <li><a href="repair-status.html" class="nav__link">Repair status</a></li>
+            </ul>
+            <div class="nav__actions">
+                <a href="https://wa.me/6285795738637" target="_blank" rel="noopener" class="btn btn--wa btn--sm nav__cta">
+                    <svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg> <span class="nav__cta-label">WhatsApp us</span>
+                </a>
+                <button id="menu-btn" type="button" class="icon-btn nav__toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+                    <svg class="ic ic--menu" aria-hidden="true"><use href="#i-menu"/></svg>
+                    <svg class="ic ic--close" aria-hidden="true"><use href="#i-close"/></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="mobile-menu">
+            <ul class="mobile-menu__list container">
+                <li style="--i:0"><a href="index.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></span>Home<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:1"><a href="collection.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg></span>Collection<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:2"><a href="index.html#services" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg></span>Services<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:3"><a href="index.html#journal" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg></span>Journal<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:4"><a href="repair-status.html" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-gauge"/></svg></span>Repair status<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+                <li style="--i:5"><a href="#kontak" class="mobile-link"><span class="mobile-link__icon"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg></span>Contact<svg class="ic mobile-link__chev" aria-hidden="true"><use href="#i-chevron"/></svg></a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="nf">
+        <div class="nf__inner">
+            <p class="nf__code"><span class="sr-only">404</span><span aria-hidden="true">4</span><svg class="nf__hole" viewBox="0 0 100 120" aria-hidden="true"><circle class="ring" cx="50" cy="60" r="44"/><circle class="ring2" cx="50" cy="60" r="38"/><circle class="well" cx="50" cy="60" r="33"/><line class="str" x1="50" y1="60" x2="50" y2="36" stroke-width="3"/><line class="str" x1="50" y1="60" x2="66" y2="69" stroke-width="2.4"/></svg><span aria-hidden="true">4</span></p>
+            <h1>Page not found</h1>
+            <p class="nf__text">The page you opened does not exist or has moved.</p>
+            <div class="nf__actions">
+                <a class="btn btn--wa btn--lg" href="/"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Go home</a>
+                <a class="btn btn--ghost btn--lg" href="/collection.html"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> View the collection</a>
+            </div>
+            <nav class="nf__more" aria-label="Other pages">
+                <span class="nf__more-label">Or open</span>
+                <a class="chip" href="/#services">Services</a>
+                <a class="chip" href="/repair-status.html">Repair status</a>
+                <a class="chip" href="/#journal">Journal</a>
+            </nav>
+        </div>
+    </main>
+
+    <footer id="kontak" class="site-footer">
+        <div class="container footer__grid">
+            <div class="footer__brand">
+                <a href="index.html" class="brand">
+                    <span class="brand__mark" aria-hidden="true"></span>
+                    <span class="brand__name">jubeli<span class="text-accent">watch</span></span>
+                </a>
+                <p class="footer__desc">Vintage and pre-owned watches, chosen with care. Buy, sell, consign, and service.</p>
+            </div>
+            <div class="footer__col">
+                <h3 class="footer__title">Contact</h3>
+                <ul class="footer__list">
+                    <li><a href="https://wa.me/6285795738637" target="_blank" rel="noopener" class="footer__link"><span class="footer__icon footer__icon--wa"><svg class="ic ic--fill" aria-hidden="true"><use href="#i-wa"/></svg></span>WhatsApp +62 857-9573-8637</a></li>
+                    <li><a href="https://instagram.com/jubeliwatch" target="_blank" rel="noopener" class="footer__link"><span class="footer__icon footer__icon--ig"><svg class="ic ic--fill" aria-hidden="true"><use href="#i-ig"/></svg></span>@jubeliwatch</a></li>
+                    <li><a href="mailto:jubeliwatch@gmail.com" class="footer__link"><span class="footer__icon"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg></span>jubeliwatch@gmail.com</a></li>
+                </ul>
+            </div>
+            <div class="footer__col">
+                <h3 class="footer__title">Explore</h3>
+                <ul class="footer__list footer__list--plain">
+                    <li><a href="collection.html" class="footer__link">Collection</a></li>
+                    <li><a href="index.html#services" class="footer__link">Services</a></li>
+                    <li><a href="index.html#journal" class="footer__link">Journal</a></li>
+                    <li><a href="repair-status.html" class="footer__link">Repair status</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="container footer__bottom">
+            <p>&copy; 2026 Jubeliwatch. Time, well kept.</p>
+            <a href="#" class="footer__top">Back to top <svg class="ic" aria-hidden="true"><use href="#i-arrow-up"/></svg></a>
+        </div>
+    </footer>
+</body>
+</html>

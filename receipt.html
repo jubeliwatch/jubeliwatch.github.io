@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Service Receipt | Jubeliwatch</title>
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+    <meta name="theme-color" content="#15100c">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400..800&display=swap">
+    <link rel="stylesheet" href="theme-dark.css">
+    <link rel="stylesheet" href="layanan.css">
+    <script src="util.js"></script>
+    <script src="layanan-config.js"></script>
+    <script src="layanan.js"></script>
+</head>
+<body class="nota-body">
+    <div class="nota-bar" id="bar" hidden>
+        <button type="button" class="ly-btn ly-btn--pri" id="cetak">Save PDF / Print</button>
+        <a class="ly-btn" id="kembali" href="repair-status.html">Repair status</a>
+    </div>
+    <main id="isi"><p class="ly-kosong">Loading&hellip;</p></main>
+
+    <script>
+(function () {
+    var L = Layanan, C = L.C, E = L.esc, isi = document.getElementById('isi');
+
+    function nota(s) {
+        var t = C.toko, hit = L.hitung(s, s.items, s.bayar);
+        var cap = hit.lunas ? '<span class="nota-lunas">PAID</span>' : hit.dibayar ? '<span class="nota-lunas dp">DEPOSIT</span>' : '';
+        var gar = (s.items || []).filter(function (i) { return i.garansi; });
+        document.title = 'Receipt ' + s.kode + ' | ' + t.nama;
+        isi.innerHTML = '<article class="nota">' + L.kopNota('Service Receipt', s.kode, cap) +
+            '<dl class="nota-info">' +
+            '<div><dt>Customer</dt><dd>' + E(s.nama) + '</dd></div><div><dt>Phone</dt><dd>' + E(s.hp_samar) + '</dd></div>' +
+            '<div><dt>Watch</dt><dd>' + E(L.namaGitar(s, '–')) + '</dd></div><div><dt>Date in</dt><dd>' + L.tgl(s.tgl_masuk) + '</dd></div>' +
+            (s.tgl_diambil ? '<div><dt>Collected</dt><dd>' + L.tgl(s.tgl_diambil) + '</dd></div>' : s.tgl_selesai ? '<div><dt>Done</dt><dd>' + L.tgl(s.tgl_selesai) + '</dd></div>' : s.estimasi ? '<div><dt>Estimate</dt><dd>' + L.tgl(s.estimasi) + '</dd></div>' : '') +
+            '<div><dt>Status</dt><dd>' + E((L.STATUS[s.status] || {}).label || s.status) + '</dd></div>' +
+            (function () {
+                var tt = s.status === 'selesai' && L.titip(s); if (!tt) return '';
+                return tt.hariBiaya ? '<div><dt>Storage fee</dt><dd>' + tt.hariBiaya + ' days = ' + L.rupiah(tt.biaya) + '</dd></div>' : '<div><dt>Free storage until</dt><dd>' + L.tgl(tt.batasGratis) + '</dd></div>';
+            })() +
+            (s.keluhan ? '<div style="grid-column:1/-1"><dt>Problem</dt><dd>' + E(s.keluhan) + '</dd></div>' : '') + '</dl>' +
+
+            '<table><thead><tr><th>Work / part</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Subtotal</th></tr></thead><tbody>' +
+            ((s.items || []).length ? s.items.map(function (i) {
+                return '<tr><td>' + E(i.nama) + '<small>' + (i.jenis === 'part' ? 'Part' : 'Work') + '</small></td><td class="r">' + (i.qty || 1) + '</td><td class="r">' + L.rupiah(i.harga) + '</td><td class="r">' + L.rupiah(i.harga * (i.qty || 1)) + '</td></tr>';
+            }).join('') : '<tr><td colspan="4">No cost breakdown yet.</td></tr>') + '</tbody></table>' +
+
+            '<div class="nota-tot">' +
+            (hit.diskon ? '<div><span>Subtotal</span><span>' + L.rupiah(hit.jasa + hit.part) + '</span></div><div><span>Discount</span><span>' + L.rupiah(-hit.diskon) + '</span></div>' : '') +
+            '<div class="t"><span>Total</span><span>' + L.rupiah(hit.total) + '</span></div>' +
+            (L.beres(s) ? '' : '<div><span>Upfront (deposit ' + L.dpPersen() + '% of work + parts)</span><span>' + L.rupiah(hit.wajibAwal) + '</span></div>') +
+            (s.bayar || []).map(function (b) { return '<div><span>' + ({ dp: 'Deposit', pelunasan: 'Final payment', tambahan: 'Payments' })[b.jenis] + ' ' + L.tgl(b.tgl) + ' (' + ({ tunai: 'tunai', transfer: 'transfer', qris: 'QRIS' })[b.metode] + ')</span><span>' + L.rupiah(-b.jumlah) + '</span></div>'; }).join('') +
+            '<div class="s"><span>Balance due</span><span>' + L.rupiah(hit.sisa) + '</span></div></div>' +
+
+            (!hit.lunas && hit.total ? '<h2>Bank transfer</h2><div class="nota-rek">' + t.rekening.map(function (r) { return '<b>' + E(r.bank) + ' ' + E(r.nomor) + '</b> a.n. ' + E(r.atasNama); }).join('<br>') + '<br><small>Send the transfer receipt to WhatsApp +' + E(t.wa) + ' quoting code ' + E(s.kode) + '.</small></div>' : '') +
+
+            (gar.length ? '<h2>Warranty</h2><div class="nota-gar">' + gar.map(function (i) {
+                var akhir = s.tgl_diambil ? L.garansiAkhir(i.garansi, s.tgl_diambil) : null;
+                var ket = L.garansiHangus(s) ? ' · void (not collected within ' + C.garansiHangusHari + ' days)' : akhir ? ' · s/d ' + L.tgl(akhir) : ' · starts when the watch is collected';
+                return '<div><b>' + E(i.nama) + '</b><span>' + L.garansiLabel(i.garansi) + ket + '</span>' + (i.garansi_syarat ? '<small>' + E(i.garansi_syarat) + '</small>' : '') + '</div>';
+            }).join('') + '</div>' : '') +
+
+            '<h2>Terms</h2><ol>' + L.ketentuan().map(function (x) { return '<li>' + E(x) + '</li>'; }).join('') + '</ol>' +
+            '<p class="nota-foot">Thank you for trusting Jubeliwatch with your watch.<br>Check your repair status any time at jubeliwatch.github.io/repair-status.html</p></article>';
+        document.getElementById('bar').hidden = false;
+        document.getElementById('kembali').href = 'repair-status.html?k=' + encodeURIComponent(s.kode);
+    }
+    document.getElementById('cetak').addEventListener('click', function () { window.print(); });
+
+    L.halamanKode({ isi: isi, kunci: 'jubeli-cek', jenis: 'servis', halaman: 'receipt.html', judul: 'Service receipt', labelKode: 'Service code', contoh: 'JBW-XXXXX', tombol: 'Open receipt', tampil: nota });
+})();
+    </script>
+</body>
+</html>

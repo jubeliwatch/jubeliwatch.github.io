@@ -1,0 +1,261 @@
+/* ==========================================================================
+   Toko Gitar AYRI — style-artikel.css (khusus halaman artikel)
+   Token, komponen, header & footer ada di theme-dark.css.
+   ========================================================================== */
+
+/* 1. Kerangka halaman artikel
+   ========================================================================== */
+.container--article { width: min(100% - 2 * var(--gutter), 760px); margin-inline: auto; }
+
+.article-page { position: relative; isolation: isolate; }
+.article-page::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 680px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60% 70% at 88% 0%, rgba(208, 138, 46, .16), transparent 70%),
+    radial-gradient(40% 50% at 0% 20%, rgba(18, 128, 77, .06), transparent 70%);
+}
+html[data-theme="dark"] .article-page::before {
+  background:
+    radial-gradient(60% 70% at 88% 0%, rgba(226, 166, 90, .13), transparent 70%),
+    radial-gradient(40% 50% at 0% 20%, rgba(46, 180, 115, .05), transparent 70%);
+}
+
+/* Garis progres baca di bawah header */
+.read-progress {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  transform: scaleX(0); transform-origin: left;
+  pointer-events: none;
+}
+
+.nav__home { width: 16px; height: 16px; margin-right: 6px; }
+
+/* 2. Kepala artikel
+   ========================================================================== */
+.article-hero { padding-top: calc(var(--header-h) + env(safe-area-inset-top) + clamp(1.5rem, 5vw, 3.5rem)); }
+.article-hero > * { animation: rise .9s var(--ease-out) backwards; }
+.article-hero > :nth-child(2) { animation-delay: .06s; }
+.article-hero > :nth-child(3) { animation-delay: .12s; }
+.article-hero > :nth-child(4) { animation-delay: .2s; }
+
+.breadcrumb ol {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin: 0 0 20px; padding: 0; list-style: none;
+  font-size: .8125rem; font-weight: 600; color: var(--ink-3);
+}
+.breadcrumb li { display: inline-flex; align-items: center; gap: 10px; }
+.breadcrumb li + li::before {
+  content: ""; width: 6px; height: 6px;
+  border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor;
+  transform: rotate(45deg); opacity: .5;
+}
+.breadcrumb a { transition: color .2s; }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb [aria-current] { color: var(--ink-2); }
+
+.article-title {
+  margin-top: 16px;
+  font-family: var(--font-display); font-weight: 600; font-optical-sizing: auto;
+  font-size: clamp(2rem, 1.35rem + 2.9vw, 3.25rem);
+  line-height: 1.1; letter-spacing: -.02em; text-wrap: balance;
+}
+
+.article-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+  margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: .875rem; font-weight: 600; color: var(--ink-3);
+}
+.article-meta__item { display: inline-flex; align-items: center; gap: 8px; }
+.article-meta__item .ic { width: 18px; height: 18px; color: var(--accent); }
+
+.article-share {
+  display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+  height: 38px; padding: 0 14px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-2);
+  font-size: .8125rem; font-weight: 700; cursor: pointer;
+  transition: border-color .2s, color .2s, transform .15s var(--ease);
+}
+.article-share .ic { width: 16px; height: 16px; }
+.article-share:hover { border-color: var(--accent-line); color: var(--ink); }
+.article-share:active { transform: scale(.95); }
+
+/* Sampul: tiga material nut di atas kayu */
+.article-cover {
+  width: min(100% - 2 * var(--gutter), 1000px); margin: clamp(1.75rem, 4vw, 2.75rem) auto 0;
+  animation: rise 1s var(--ease-out) .25s backwards;
+}
+.cover {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: clamp(12px, 4vw, 44px);
+  padding: clamp(32px, 7vw, 64px) clamp(16px, 5vw, 56px);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(60% 80% at 50% 40%, rgba(226, 166, 90, .26), transparent 70%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 5px),
+    linear-gradient(160deg, #3D281A, #1F140C);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), var(--shadow-lg);
+}
+.cover__item {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  flex: 1 1 0; max-width: 220px;
+  animation: float 6s var(--ease) infinite; animation-delay: calc(var(--i) * -2s);
+}
+.cover__item .nut { max-width: 100%; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .45)); }
+.cover__label { font-size: .6875rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(239, 232, 221, .72); }
+
+/* 3. Isi artikel (prose)
+   ========================================================================== */
+.article-body { margin-top: clamp(2rem, 5vw, 3.5rem); padding-bottom: clamp(3.5rem, 8vw, 5.5rem); }
+
+.prose { font-size: clamp(1.0625rem, 1rem + .25vw, 1.1875rem); line-height: 1.8; color: var(--ink-2); }
+.prose > * + * { margin-top: 1.25em; }
+.prose strong { color: var(--ink); font-weight: 700; }
+.prose em { font-style: italic; }
+.prose a:not(.btn) {
+  color: var(--accent); font-weight: 600;
+  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+  text-decoration-color: var(--accent-line);
+  transition: text-decoration-color .2s;
+}
+.prose a:not(.btn):hover { text-decoration-color: var(--accent); }
+
+/* Paragraf pembuka + drop cap */
+.prose > p:first-child { font-size: 1.1em; line-height: 1.75; color: var(--ink); }
+.prose > p:first-child::first-letter {
+  float: left; margin: .08em .12em 0 0;
+  font-family: var(--font-display); font-weight: 600; font-size: 3.6em; line-height: .85;
+  color: var(--accent);
+}
+
+.prose h2 {
+  margin-top: 2.2em;
+  font-family: var(--font-display); font-weight: 600; font-optical-sizing: auto;
+  font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  line-height: 1.2; letter-spacing: -.015em; text-wrap: balance;
+  color: var(--ink);
+}
+.prose h2 + * { margin-top: .9em; }
+
+/* Daftar masalah: kartu bernomor */
+.issue-list { display: grid; gap: 12px; padding: 0; list-style: none; counter-reset: issue; }
+.issue-list li {
+  position: relative; counter-increment: issue;
+  padding: 18px 20px 18px 66px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); box-shadow: var(--shadow-sm);
+  font-size: .95em; line-height: 1.7;
+}
+.issue-list li::before {
+  content: counter(issue, decimal-leading-zero);
+  position: absolute; left: 18px; top: 18px;
+  display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 10px; background: var(--accent-soft); color: var(--accent);
+  font: 600 .875rem/1 var(--font-display);
+}
+.issue-list strong { display: block; margin-bottom: 2px; }
+
+/* Perbandingan material */
+.material-compare { display: grid; gap: 14px; }
+.mat-card {
+  display: grid; gap: 16px; padding: 14px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-sm);
+  transition: transform .5s var(--ease-out), box-shadow .5s var(--ease-out), border-color .3s;
+}
+.mat-card__swatch { display: grid; place-items: center; height: 104px; padding: 0 28px; }
+.mat-card__swatch .nut { max-width: 170px; }
+.mat-card p { margin: 0; padding: 0 6px 6px; font-size: .95em; line-height: 1.7; }
+.mat-card strong { display: block; margin-bottom: 4px; font-size: 1.05em; }
+@media (min-width: 600px) {
+  .mat-card { grid-template-columns: 200px 1fr; align-items: center; gap: 22px; padding: 14px 24px 14px 14px; }
+  .mat-card__swatch { height: 100%; min-height: 112px; padding: 0 20px; }
+  .mat-card p { padding: 0; }
+}
+@media (hover: hover) {
+  .mat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--accent-line); }
+}
+
+/* 4. Kartu penawaran (selalu gelap, token dari theme-dark.css)
+   ========================================================================== */
+.prose > .offer { margin-top: 2.5em; }
+.offer {
+  position: relative; overflow: hidden;
+  padding: clamp(22px, 5vw, 40px);
+  border-radius: var(--r-xl);
+  color: var(--ink-2);
+  background:
+    radial-gradient(70% 60% at 100% 0%, rgba(226, 166, 90, .22), transparent 65%),
+    radial-gradient(50% 50% at 0% 100%, rgba(46, 180, 115, .10), transparent 70%),
+    var(--bg);
+  box-shadow: var(--shadow-lg);
+  font-size: 1rem; line-height: 1.65;
+}
+html[data-theme="dark"] .offer { border: 1px solid var(--line); }
+
+.prose .offer__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem); line-height: 1.15;
+  color: var(--ink);
+}
+.offer__text { margin-top: 12px; font-size: 1.0625rem; color: var(--ink-2); }
+
+.offer__grid { display: grid; gap: 12px; margin-top: 24px; }
+@media (min-width: 560px) { .offer__grid { grid-template-columns: 1fr 1fr; } }
+.offer-price {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.offer-price__name { font-size: 1.0625rem; font-weight: 700; color: var(--ink); }
+.offer-price__desc { font-size: .875rem; line-height: 1.55; color: var(--ink-3); }
+.offer-price__amount {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  margin-top: auto; padding-top: 14px;
+  font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.offer-price__cur { font-size: .8125rem; font-weight: 700; color: var(--ink-3); }
+
+.upsell {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px 14px;
+  margin-top: 12px; padding: 18px 20px;
+  border: 1px solid var(--accent-line); border-radius: var(--r-lg);
+  background: linear-gradient(120deg, rgba(226, 166, 90, .20), rgba(226, 166, 90, .05));
+}
+.upsell__icon {
+  display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: var(--r-sm); background: var(--accent); color: var(--on-accent);
+}
+.upsell__title { font-size: 1.0625rem; font-weight: 700; color: var(--ink); }
+.upsell__text { margin-top: 4px; font-size: .875rem; line-height: 1.6; color: var(--ink-2); }
+.upsell__price {
+  grid-column: 1 / -1; justify-self: start;
+  display: inline-flex; align-items: center; height: 40px; padding: 0 16px;
+  border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent);
+  font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+  .upsell { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+  .upsell__price { grid-column: auto; justify-self: end; }
+}
+
+.offer__cta { width: 100%; margin-top: 24px; }
+@media (min-width: 560px) { .offer__cta { width: auto; } }
+
+.article-outro { padding-top: 1.5em; border-top: 1px solid var(--line); }
+.prose > .article-outro { margin-top: 2em; }
+
+/* Artikel otomatis dari admin (hasil servis): foto, galeri, daftar, kutipan */
+.article-photo { margin-top: clamp(1.5rem, 4vw, 2.5rem); animation: rise 1s var(--ease-out) .25s backwards; }
+.article-photo img, .article-gallery img { width: 100%; height: auto; border-radius: var(--r-lg); box-shadow: var(--shadow-md); background: var(--surface-2); }
+.article-photo figcaption, .article-gallery figcaption { margin-top: .5rem; font-size: .8125rem; color: var(--ink-3); text-align: center; }
+.article-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.article-gallery__item { margin: 0; }
+.prose ul:not([class]), .prose ol:not([class]) { padding-left: 1.3em; }
+.prose ul:not([class]) { list-style: disc; }
+.prose ol:not([class]) { list-style: decimal; }
+.prose ul:not([class]) li + li, .prose ol:not([class]) li + li { margin-top: .4em; }
+.prose blockquote { margin: 0; padding: 14px 18px; border-left: 3px solid var(--accent); border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--accent-soft); color: var(--ink-2); }

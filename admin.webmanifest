@@ -1,0 +1,58 @@
+{
+  "id": "/admin.html",
+  "name": "Jubeli POS",
+  "short_name": "Jubeli POS",
+  "description": "Checkout, service, stock, and cash for Jubeliwatch.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/admin.html#hari",
+  "scope": "/admin.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#282820",
+  "theme_color": "#282820",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Checkout",
+      "url": "/admin.html#kasir",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Service",
+      "url": "/admin.html#servis",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

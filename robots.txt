@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /data/katalog.json
+Disallow: /data/
+Disallow: /scripts/
+
+Sitemap: https://jubeliwatch.github.io/sitemap.xml
