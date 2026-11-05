@@ -22,6 +22,7 @@
     }
     /* ---------- tombol aksi seragam: baris WhatsApp (judul + keterangan + panah) dan kartu aksi berikon ---------- */
     var IKON = {
+        kontak: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
         lihat: '<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
         cetak: '<path d="M7 9V4h10v5"/><path d="M7 17H5.5A1.5 1.5 0 0 1 4 15.5v-5A1.5 1.5 0 0 1 5.5 9h13a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H17"/><path d="M7 14h10v6H7z"/>',
         nota: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
@@ -59,6 +60,28 @@
         if (o.href) return '<a class="' + kls + '"' + (o.luar ? ' target="_blank"' : '') + ' href="' + o.href + '">' + isi + '</a>';
         return '<button type="button" class="' + kls + '" id="' + o.id + '">' + isi + '</button>';
     }
+    /* Isian rupiah (input[data-rp]): tampil dengan titik ribuan saat diketik (100000 -> 100.000). Kode lain tetap membaca/menulis
+       .value sebagai angka polos ("100000"), jadi hitungan, simpan, dan data tidak berubah. Dipasang otomatis pada isian baru. */
+    var NILAI_IN = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    function titikRp(v) { var d = String(v == null ? '' : typeof v === 'number' ? Math.round(v) : v).replace(/\D/g, '').replace(/^0+(?=\d)/, ''); return d.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+    function pasangRp(el) {
+        if (el._rp) return; el._rp = true;
+        Object.defineProperty(el, 'value', { configurable: true, get: function () { return NILAI_IN.get.call(el).replace(/\D/g, ''); }, set: function (v) { NILAI_IN.set.call(el, titikRp(v)); } });
+        NILAI_IN.set.call(el, titikRp(NILAI_IN.get.call(el)));
+    }
+    function pasangSemuaRp(root) { (root.querySelectorAll ? root.querySelectorAll('input[data-rp]') : []).forEach(pasangRp); }
+    new MutationObserver(function (m) { m.forEach(function (x) { x.addedNodes.forEach(function (n) { if (n.nodeType === 1) { if (n.matches('input[data-rp]')) pasangRp(n); pasangSemuaRp(n); } }); }); })
+        .observe(document.documentElement, { childList: true, subtree: true });
+    pasangSemuaRp(document);
+    /* fase tangkap: titik dirapikan lebih dulu, posisi kursor dijaga (dihitung dari jumlah angka di depannya) */
+    document.addEventListener('input', function (e) {
+        var el = e.target; if (!el || !el._rp) return;
+        var mentah = NILAI_IN.get.call(el), pos = el.selectionStart == null ? mentah.length : el.selectionStart, n = mentah.slice(0, pos).replace(/\D/g, '').length, baru = titikRp(mentah);
+        if (baru === mentah) return;
+        NILAI_IN.set.call(el, baru);
+        var i = 0; for (var k = 0; i < baru.length && k < n; i++) if (/\d/.test(baru.charAt(i))) k++;
+        try { el.setSelectionRange(i, i); } catch (x) { /* abaikan */ }
+    }, true);
     /* Penjelasan isian: ikon ⓘ di samping label, teksnya baru tampil saat diketuk (lebih ringkas daripada paragraf yang selalu terlihat) */
     function bantu(id) { return ' <button type="button" class="ly-i" data-tip="' + id + '" aria-label="Explanation" aria-expanded="false">i</button>'; }
     function tip(id, teks) { return '<p class="ly-hint ly-tip" id="' + id + '" hidden>' + teks + '</p>'; }
@@ -97,7 +120,7 @@
     }
     function bisaPilihKontak() { return kontakAplikasi() || !!(navigator.contacts && typeof navigator.contacts.select === 'function' && window.ContactsManager); }
     function tombolKontak(selNama, selHp) {
-        return bisaPilihKontak() ? '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" data-kn="' + E(selNama) + '" data-kh="' + E(selHp) + '">📇 Pick from contacts</button></div>' : '';
+        return bisaPilihKontak() ? '<div class="ly-btns ly-kontak"><button type="button" class="ly-btn ly-btn--sm" data-kn="' + E(selNama) + '" data-kh="' + E(selHp) + '">' + ikon('kontak') + 'Pick from contacts</button></div>' : '';
     }
     function bersihHp(t) { var n = String(t || '').replace(/[^\d+]/g, ''); return n.charAt(0) === '+' ? '+' + n.slice(1).replace(/\+/g, '') : n.replace(/\+/g, ''); }
     function isiKolom(sel, nilai) { var el = sel && $(sel); if (!el || !nilai) return; el.value = nilai; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -538,7 +561,7 @@
         $('#ks-isi').innerHTML = kr.items.length ? kr.items.map(function (it, i) {
             return '<div class="ks-it"><div class="ks-it__a"><b>' + E(it.nama) + '</b><small>' + E(it.jenis === 'jasa' ? 'Quick service' : it.kode) + '</small></div><button type="button" class="ly-x" data-hapus data-i="' + i + '" aria-label="Remove from cart">×</button>' +
                 '<div class="ks-it__b">' + (it.jenis !== 'servis' ? '<span class="ks-qty"><button type="button" data-q="-1" data-i="' + i + '" aria-label="' + (it.qty > 1 ? 'Decrease' : 'Remove from cart') + '">' + (it.qty > 1 ? '−' : '🗑') + '</button><b>' + it.qty + '</b><button type="button" data-q="1" data-i="' + i + '" aria-label="Add"' + (it.qty >= it.maks ? ' disabled' : '') + '>+</button></span>' +
-                    '<label class="ks-harga">@<input type="number" inputmode="numeric" min="0" step="1000" data-harga data-i="' + i + '" value="' + it.harga + '" aria-label="Unit price"></label>'
+                    '<label class="ks-harga">@<input type="text" inputmode="numeric" autocomplete="off" data-rp data-harga data-i="' + i + '" value="' + it.harga + '" aria-label="Unit price"></label>'
                     : '<label class="ks-ambil"><input type="checkbox" data-ambil data-i="' + i + '"' + (it.ambil ? ' checked' : '') + '> Watch collected now</label>') +
                 '<b class="ks-it__sub">' + L.rupiah(it.harga * it.qty) + '</b></div></div>';
         }).join('') : '<div class="ks-kosong">' + SVG.troli + '<b>The cart is empty</b><span>Tap an item or a service ready to pay on the left to start an invoice.</span></div>';
@@ -563,7 +586,7 @@
             '<p class="ly-hint" style="margin:0 0 10px">For work finished while the customer waits. No warranty, and it does not appear in the Service menu.</p>' +
             '<div class="ks-jasa-f"><label>Service name<input class="ly-in" id="kj-nama" list="kj-saran" maxlength="80" autocomplete="off" placeholder="e.g. Battery replacement, Strap fitting"></label>' +
             '<datalist id="kj-saran">' + saran.map(function (x) { return '<option value="' + E(x.nama) + '"></option>'; }).join('') + '</datalist>' +
-            '<label>Price (Rp)<input class="ly-in" id="kj-harga" type="number" inputmode="numeric" min="0" step="1000"></label></div>' +
+            '<label>Price (Rp)<input class="ly-in" id="kj-harga" type="text" inputmode="numeric" autocomplete="off" data-rp></label></div>' +
             '<div class="ly-btns ks-m__aksi"><button type="button" class="ly-btn" data-tutup>Cancel</button><button type="button" class="ly-btn ly-btn--pri" id="kj-ok">Add to cart</button></div></div>';
         m.hidden = false;
         var nama = $('#kj-nama'), harga = $('#kj-harga'), terakhir = '';
@@ -606,11 +629,11 @@
                         '<div class="ly-sum"><div><span>Deducted from credit</span><span>' + L.rupiah(Math.min(tot, (kreditDipilih() || { sisa: 0 }).sisa)) + '</span></div><div class="ly-total"><span>Still to pay</span><span>' + L.rupiah(Math.max(0, tot - (kreditDipilih() || { sisa: 0 }).sisa)) + '</span></div></div>' : '') : '') +
                 (hanyaStok ? '<div class="ly-status ks-seg"><button type="button" data-dp="0" aria-pressed="' + !dp + '">Pay in full</button><button type="button" data-dp="1" aria-pressed="' + dp + '">Deposit (part payment)</button></div>' : '') +
                 '<div class="ly-status ks-seg"><button type="button" data-metode="tunai" aria-pressed="' + (bayar.metode === 'tunai') + '">Cash</button><button type="button" data-metode="transfer" aria-pressed="' + (bayar.metode === 'transfer') + '">Transfer</button></div>' +
-                (dp ? '<div class="ly-f"><label>Deposit amount (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="km-dp" value="' + E(bayar.jumlahDp) + '"></label>' +
+                (dp ? '<div class="ly-f"><label>Deposit amount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="km-dp" value="' + E(bayar.jumlahDp) + '"></label>' +
                     '<label>Pay balance by<input type="date" id="km-batas" value="' + E(bayar.batas) + '"></label></div>' +
                     '<div class="ly-sum"><div><span>Balance after deposit</span><span>' + L.rupiah(Math.max(0, tot - (+bayar.jumlahDp || 0))) + '</span></div><div><span>If cancelled: fee ' + C.jual.potonganPersen + '% (no more than the deposit)</span><span>' + L.rupiah(hh.potongan) + '</span></div></div>' +
                     '<p class="ly-hint" style="margin:0">A deposit needs the buyer’s name and WhatsApp number. The item is held until paid in full; the deposit receipt is sent by WhatsApp next.</p>'
-                    : bayar.metode === 'tunai' && perlu() > 0 ? '<div class="ly-f"><label>Cash received (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="km-terima" value="' + bayar.diterima + '"></label></div>' +
+                    : bayar.metode === 'tunai' && perlu() > 0 ? '<div class="ly-f"><label>Cash received (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="km-terima" value="' + bayar.diterima + '"></label></div>' +
                         '<div class="ks-pecahan">' + pecahan().map(function (x) { return '<button type="button" class="ly-btn ly-btn--sm" data-terima="' + x + '">' + (x === perlu() ? 'Exact amount' : L.rupiah(x)) + '</button>'; }).join('') + '</div>' +
                         '<div class="ly-sum"><div class="ly-total"><span>Change</span><span' + (kembali < 0 ? ' class="ly-telat"' : '') + '>' + (kembali < 0 ? 'short ' + L.rupiah(-kembali) : L.rupiah(kembali)) + '</span></div></div>' : '') +
                 '<div class="ly-btns ks-m__aksi"><button type="button" class="ly-btn" data-tutup>Cancel</button><button type="button" class="ly-btn ly-btn--pri" id="km-ok">' + (dp ? 'Save deposit' : 'Confirm payment') + '</button></div></div>';
@@ -856,7 +879,7 @@
         if (!k || !k.buka_jam) {
             el.innerHTML = '<div class="kas-head"><h2>Today’s cash</h2><span class="st-chip st-menunggu_dp">Not opened</span></div>' +
                 '<p class="ly-muted" style="margin:0">Count the cash in the drawer before serving customers, then open the register.</p>' +
-                '<div class="ly-f"><div class="ly-row2"><label>Opening drawer cash (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="kas-awal" value="' + (k && k.saldo_awal || '') + '"></label>' +
+                '<div class="ly-f"><div class="ly-row2"><label>Opening drawer cash (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="kas-awal" value="' + (k && k.saldo_awal || '') + '"></label>' +
                 '<label>Opened by<input id="kas-oleh" list="kas-nama" value="' + E(namaTerakhir()) + '"></label></div>' + dl +
                 '<button type="button" class="ly-btn ly-btn--pri" id="kas-buka">Open register</button></div>';
         } else if (!k.tutup_jam) {
@@ -867,12 +890,12 @@
                 (k.pengeluaran.length ? '<div class="kas-keluar">' + k.pengeluaran.map(function (p) { return '<div><span><b>' + E(p.ket) + '</b><small>' + E(p.jam) + ' · ' + E(p.kategori) + ' · ' + E(p.metode === 'transfer' ? 'transfer' : 'tunai') + ' · ' + E(p.oleh || '') + '</small></span><b>−' + L.rupiah(p.jumlah) + '</b></div>'; }).join('') + '</div>' : '') +
                 '<details class="kas-form" id="kas-f-keluar"><summary class="ly-btn">+ Record an expense</summary><div class="ly-f">' +
                 '<label>What for<input id="kp-ket" placeholder="e.g. watch batteries, fuel, lunch"></label>' +
-                '<div class="ly-row2"><label>Amount (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="kp-jml"></label><label>Category<select id="kp-kat">' + opsi(L.KATEGORI_KELUAR, L.KATEGORI_KELUAR[0]) + '</select></label></div>' +
+                '<div class="ly-row2"><label>Amount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="kp-jml"></label><label>Category<select id="kp-kat">' + opsi(L.KATEGORI_KELUAR, L.KATEGORI_KELUAR[0]) + '</select></label></div>' +
                 '<div class="ly-row2"><label>Paid from<select id="kp-metode">' + opsi([['tunai', 'Drawer (cash)'], ['transfer', 'Bank account (transfer)']], 'tunai') + '</select></label><label>Recorded by<input id="kp-oleh" list="kas-nama" value="' + E(namaTerakhir()) + '"></label></div>' + dl +
                 '<button type="button" class="ly-btn ly-btn--pri" id="kas-keluar">Save expense</button></div></details>' +
                 '<details class="kas-form" id="kas-f-tutup"><summary class="ly-btn">Close register</summary><div class="ly-f">' +
                 '<p class="ly-muted" style="margin:0">Count all the cash in the drawer, then enter the amount. Expected: <b>' + L.rupiah(n.harus) + '</b>.</p>' +
-                '<div class="ly-row2"><label>Cash in drawer (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="kt-hitung"></label><label>Closed by<input id="kt-oleh" list="kas-nama" value="' + E(namaTerakhir()) + '"></label></div>' +
+                '<div class="ly-row2"><label>Cash in drawer (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="kt-hitung"></label><label>Closed by<input id="kt-oleh" list="kas-nama" value="' + E(namaTerakhir()) + '"></label></div>' +
                 '<label>Note (optional)<input id="kt-cat" placeholder="e.g. small change swapped, Rp… deposited to the bank"></label><div id="kt-selisih"></div>' +
                 '<button type="button" class="ly-btn ly-btn--pri" id="kas-tutup">Close register</button></div></details>';
         } else {
@@ -1261,6 +1284,15 @@
                 var k = i.kode + '|' + i.nama, l = laris[k] = laris[k] || { nama: i.nama, kode: i.kode, qty: 0, omzet: 0 }; l.qty += i.qty; l.omzet += i.harga * i.qty;
             });
         });
+        /* part dari stok yang dipakai servis (catatan penjualan servis_id di stok) */
+        cache.stok.forEach(function (s) {
+            (s.penjualan || []).forEach(function (p) {
+                if (!p.servis_id || String(p.tgl).slice(0, 7) !== bln) return;
+                var m = +s.harga_beli; r.terjual += p.qty;
+                if (m) r.untung += (p.harga - m) * p.qty; else r.tanpaModal++;
+                var k = s.kode + '|' + L.namaStok(s), l = laris[k] = laris[k] || { nama: L.namaStok(s), kode: s.kode, qty: 0, omzet: 0 }; l.qty += p.qty; l.omzet += p.harga * p.qty;
+            });
+        });
         r.laris = Object.keys(laris).map(function (k) { return laris[k]; }).sort(function (a, b) { return b.qty - a.qty || b.omzet - a.omzet; }).slice(0, 8);
         r.svMasuk = cache.servis.filter(function (s) { return String(s.tgl_masuk).slice(0, 7) === bln && s.status !== 'batal'; });
         r.svSelesai = cache.servis.filter(function (s) { return String(s.tgl_selesai || '').slice(0, 7) === bln; }).length;
@@ -1446,10 +1478,10 @@
             '<div class="ly-head"><h1>' + (ed.baru ? 'Watch in' : E(L.namaGitar(s, 'Watch'))) + '</h1>' + (ed.baru ? '' : '<span class="st-chip st-' + s.status + '" id="sv-chip">' + E(L.STATUS[s.status].label) + '</span>') + '</div>' +
             (ed.baru ? '<p class="ly-muted">The service code is created automatically when you save.</p>' : kodeBaris(s)) +
 
-            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Customer</legend>' + tombolKontak('[data-f="nama"]', '[data-f="hp"]') +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Customer</legend>' +
             '<label>Name<input data-f="nama" autocomplete="off" required></label>' +
             '<label><span class="ly-lt">Phone / WhatsApp' + (ed.baru ? '' : bantu('tip-hp')) + '</span><input data-f="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx" required></label>' +
-            (ed.baru ? '' : tip('tip-hp', 'Changing the phone number changes the 4 digits used to check status; send the link to the customer again.')) + '</fieldset>' +
+            (ed.baru ? '' : tip('tip-hp', 'Changing the phone number changes the 4 digits used to check status; send the link to the customer again.')) + tombolKontak('[data-f="nama"]', '[data-f="hp"]') + '</fieldset>' +
 
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend>' +
             '<div class="ly-row2"><label>Movement<select data-f="arloji_jenis">' + opsi(jenis, s.arloji_jenis) + '</select></label>' +
@@ -1460,12 +1492,13 @@
 
             '<fieldset class="ly-card"><legend>Work &amp; parts</legend><div class="ly-items" id="sv-items"></div>' +
             '<div class="ly-add"><select class="ly-in" id="sv-katalog"><option value="">+ Add work from the list…</option>' + kat + '</select>' +
+            '<select class="ly-in" id="sv-stok" aria-label="Add part from stock"></select>' +
             '<button type="button" class="ly-btn ly-btn--sm" data-act="jasa">+ Other work</button><button type="button" class="ly-btn ly-btn--sm" data-act="part">+ Part</button></div>' +
-            '<div class="ly-f" style="margin-top:12px"><label style="max-width:220px">Discount (Rp)<input type="number" inputmode="numeric" min="0" step="1000" data-f="diskon"></label></div>' +
+            '<div class="ly-f" style="margin-top:12px"><label style="max-width:220px">Discount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-f="diskon"></label></div>' +
             '<div class="ly-sum" id="sv-sum"></div></fieldset>' +
 
             '<fieldset class="ly-card"><legend>Payments</legend><div class="ly-bayar" id="sv-bayar"></div>' +
-            '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="by-jml"></label>' +
+            '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="by-jml"></label>' +
             '<label>Type<select id="by-jenis">' + opsi([['dp', 'Deposit / upfront'], ['tambahan', 'Extra'], ['pelunasan', 'Final payment']], 'dp') + '</select></label></div>' +
             '<div class="ly-row2"><label>Metode<select id="by-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'tunai') + '</select></label><label>Date<input type="date" id="by-tgl"></label></div>' +
             '<button type="button" class="ly-btn" id="by-tambah">Record payment</button></div></fieldset>' +
@@ -1504,6 +1537,7 @@
         var sv = $('#sv');
         sv.addEventListener('input', ubahField); sv.addEventListener('change', ubahField);
         sv.addEventListener('click', klikServis);
+        $('#sv-stok').addEventListener('change', function () { var id = this.value; this.value = ''; if (id) tambahPartStok(id); });
         $('#sv-katalog').addEventListener('change', function () {
             var k = C.katalogJasa[+this.value]; this.value = ''; if (!k) return;
             ed.s.items.push({ jenis: 'jasa', nama: k.nama, harga: k.harga || 0, qty: 1, garansi: k.garansi || '', garansi_syarat: k.jatuh ? C.syaratJatuh : '' });
@@ -1529,19 +1563,49 @@
             var it = ed.s.items[+t.closest('[data-i]').dataset.i], k = t.dataset.k;
             if (k === 'jatuh') it.garansi_syarat = t.checked ? C.syaratJatuh : '';
             else it[k] = k === 'harga' || k === 'qty' ? Math.max(k === 'qty' ? 1 : 0, Math.round(+t.value || 0)) : t.value;
+            if (k === 'qty' && it.stok_id) {
+                var sk1 = cariId('stok', it.stok_id), lebih = sk1 ? qtyDiForm(it.stok_id) - batasStokServis(sk1) : 0;
+                if (lebih > 0) { it.qty = Math.max(1, it.qty - lebih); if (e.type === 'change') t.value = it.qty; toast('Stock ' + it.nama + ' only has enough for ' + it.qty + '.', true); }
+                if (e.type === 'change') opsiStokServis();
+            }
             setDirty(true); if (k === 'harga' || k === 'qty') gambarRingkas();
         }
     }
+    /* ---- part dari stok (mis. senar): stok berkurang saat servis disimpan, kembali bila part dihapus / servis batal ---- */
+    function qtyDiForm(id) { return ed.s.items.reduce(function (n, i) { return n + (i.jenis === 'part' && i.stok_id === id ? Math.max(1, +i.qty || 1) : 0); }, 0); }
+    /* batas untuk servis ini = stok sekarang + yang sudah terpakai versi tersimpan (stok itu sudah dikurangi saat disimpan dulu) */
+    function batasStokServis(s) { return (+s.jumlah || 0) + (ed.baru ? 0 : L.qtyStokServis(cariId('servis', ed.s.id), s.id)); }
+    function opsiStokServis() {
+        var el = $('#sv-stok'); if (!el) return;
+        var grup = {}, ada = 0;
+        cache.stok.filter(function (s) { return s.kategori !== 'arloji' && s.status !== 'ditarik'; }).forEach(function (s) {
+            var sisa = batasStokServis(s) - qtyDiForm(s.id); if (sisa <= 0 && !qtyDiForm(s.id)) return;
+            ada++;
+            (grup[L.jenisStok(s)] = grup[L.jenisStok(s)] || []).push('<option value="' + E(s.id) + '"' + (sisa <= 0 ? ' disabled' : '') + '>' + E(L.namaStok(s)) + (s.harga_jual ? ' – ' + L.rupiah(s.harga_jual) : '') + ' · remaining ' + Math.max(0, sisa) + '</option>');
+        });
+        el.innerHTML = '<option value="">' + (ada ? '+ Part from stock…' : 'Part from stock: no accessories in stock yet') + '</option>' + Object.keys(grup).sort().map(function (g) { return '<optgroup label="' + E(g) + '">' + grup[g].join('') + '</optgroup>'; }).join('');
+        el.disabled = !ada;
+    }
+    function tambahPartStok(id) {
+        var s = cariId('stok', id); if (!s) return;
+        if (batasStokServis(s) - qtyDiForm(id) <= 0) return toast('Stock ' + L.namaStok(s) + ' habis.', true);
+        var it = ed.s.items.filter(function (i) { return i.jenis === 'part' && i.stok_id === id; })[0];
+        if (it) it.qty = Math.max(1, +it.qty || 1) + 1;
+        else ed.s.items.push({ jenis: 'part', nama: L.namaStok(s), harga: +s.harga_jual || 0, qty: 1, stok_id: s.id, kode: s.kode, garansi: '', garansi_syarat: '' });
+        gambarItems(); gambarRingkas(); setDirty(true);
+        if (!s.harga_jual) { var ins = $$('#sv-items [data-k="harga"]'); ins[ins.length - 1].focus(); toast('This item has no selling price in Stock yet. Enter the price here.'); }
+    }
     function gambarItems() {
+        opsiStokServis();
         $('#sv-items').innerHTML = ed.s.items.length ? ed.s.items.map(function (it, i) {
             var hapus = '<button type="button" class="ly-x" data-del="' + i + '" aria-label="Delete">×</button>';
-            if (it.jenis === 'part') return '<div class="ly-it ly-it--part" data-i="' + i + '"><div class="ly-it__tag">Part' + hapus + '</div>' +
+            if (it.jenis === 'part') return '<div class="ly-it ly-it--part" data-i="' + i + '"><div class="ly-it__tag">' + (it.stok_id ? 'Part · stock ' + E(it.kode || '') : 'Part') + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Part name, e.g. Renata 377 battery" value="' + E(it.nama) + '" aria-label="Part name">' +
                 '<label class="ly-lbl">Qty<input class="ly-in" data-k="qty" type="number" inputmode="numeric" min="1" value="' + (it.qty || 1) + '"></label>' +
-                '<label class="ly-lbl">Unit price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label></div>';
+                '<label class="ly-lbl">Unit price (Rp)<input class="ly-in" data-k="harga" type="text" inputmode="numeric" autocomplete="off" data-rp value="' + (it.harga || 0) + '"></label></div>';
             return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag">Work' + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Work description" value="' + E(it.nama) + '" aria-label="Work description">' +
-                '<label class="ly-lbl">Price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label>' +
+                '<label class="ly-lbl">Price (Rp)<input class="ly-in" data-k="harga" type="text" inputmode="numeric" autocomplete="off" data-rp value="' + (it.harga || 0) + '"></label>' +
                 '<label class="ly-lbl">Warranty<select class="ly-in" data-k="garansi">' + opsi(L.GARANSI_PILIHAN, it.garansi || '') + '</select></label>' +
                 '<label class="ly-cek ly-it__n" style="font-size:.75rem"><input type="checkbox" data-k="jatuh"' + (it.garansi_syarat ? ' checked' : '') + '> Warranty condition: the watch is not dropped or knocked again</label></div>';
         }).join('') : '<p class="ly-muted">No work added yet. Pick from the list below.</p>';
@@ -1586,7 +1650,7 @@
         var t = e.target.closest('button, [data-act]'); if (!t) return;
         var d = t.dataset;
         if (d.act) { ed.s.items.push({ jenis: d.act === 'part' ? 'part' : 'jasa', nama: '', harga: 0, qty: 1, garansi: '', garansi_syarat: '' }); gambarItems(); gambarRingkas(); setDirty(true); var n = $$('#sv-items [data-k="nama"]'); n[n.length - 1].focus(); }
-        else if (d.del != null) { ed.s.items.splice(+d.del, 1); gambarItems(); gambarRingkas(); setDirty(true); }
+        else if (d.del != null) { ed.s.items.splice(+d.del, 1); gambarItems(); gambarRingkas(); setDirty(true); }  /* part dari stok: stoknya kembali saat Simpan */
         else if (d.status) ubahStatus(d.status);
         else if (d.delbayar != null) hapusBayar(+d.delbayar);
         else if (d.tampil || d.tampilq) {
@@ -1645,13 +1709,13 @@
         if (rec.status === 'menunggu_dp' && h.total > 0 && h.kurangAwal === 0) rec.status = 'antri';
         var fotoBaru = ed.antri.map(function (q) { return { hasil: q.hasil, tahap: q.tahap, tampil: q.tampil }; });
         prosesSimpan('servis', $('#sv-simpan'), teksUnggah(fotoBaru), function () { return A.simpanServis(rec, fotoBaru); }, function (row) {
-            lepasAntri(ed.antri); ed = { baru: false, s: salin(row), antri: [] };
+            lepasAntri(ed.antri); ed = { baru: false, s: salin(row), antri: [] }; cache.stok = A.daftar('stok');
             var pesan = baru ? 'Saved. Service code: ' + row.kode + '. The drop-off receipt can be printed or sent by WhatsApp.' : 'Saved. The customer page updates in about 1 minute.';
             if (statusAwal === 'menunggu_dp' && row.status === 'antri') pesan += ' The status changed to Queued automatically.';
             toast(pesan);
             if (baru) { pindah('#servis/' + row.id); setTimeout(function () { if (confirm('Service code ' + row.kode + '. Print the drop-off receipt + watch tag now?')) cetakTandaTerima(row); }, 300); }
             else gambarServis();
-        }, function (r) { lepasAntri(ed.antri); ed = { baru: false, s: r, antri: [] }; gambarFoto(); });
+        }, function (r) { lepasAntri(ed.antri); ed = { baru: false, s: r, antri: [] }; cache.stok = A.daftar('stok'); gambarFoto(); });
     }
 
     /* ---------- kirim WA, artikel, hapus ---------- */
@@ -1700,7 +1764,7 @@
         }).catch(function (e) { sibuk(b, false); gagal(e); });
     }
     function hapusServis() {
-        if (konfirmasiKode('Deleting a service job also deletes all its photos and cannot be undone.', ed.s.kode)) hapusData('servis', ed.s, $('#sv-hapus'), A.hapusServis, 'Service job deleted.');
+        if (konfirmasiKode('Deleting a service job also deletes all its photos and cannot be undone.', ed.s.kode)) hapusData('servis', ed.s, $('#sv-hapus'), function (r) { return A.hapusServis(r).then(function () { cache.stok = A.daftar('stok'); }); }, 'Service job deleted.' + (L.adaStokServis(ed.s) ? ' Parts from stock were returned.' : ''));
     }
 
     /* ================= beli dengan hak tebus ================= */
@@ -1758,9 +1822,9 @@
         app.innerHTML = '<section id="tb" class="ly-f"><div class="ly-head"><a class="ly-back" href="#tebus">‹ Buyback list</a></div>' +
             '<div class="ly-head"><h1>' + (te.baru ? 'Watch bought (buyback right)' : E(L.namaGitar(t, 'Watch'))) + '</h1>' + (te.baru ? '' : chipTebus(t)) + '</div>' +
             (te.baru ? '<p class="ly-muted">The code is created automatically when you save.</p>' : kodeBaris(t)) +
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Seller</legend>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
+            '<fieldset class="ly-card ly-f ly-grid"><legend>Seller</legend>' +
             '<label>Name (as on ID card)<input data-t="nama" autocomplete="off" required></label>' +
-            '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK (KTP number, optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' +
+            '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK (KTP number, optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
             '<p class="ly-hint">On the agreement, only the last 4 digits of the NIK and phone are shown.</p></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend>' +
             '<div class="ly-row2"><label>Movement<select data-t="arloji_jenis">' + opsi(jenis, t.arloji_jenis) + '</select></label><label>Brand / model<input data-t="arloji_merk" placeholder="e.g. Tissot PRX"></label></div>' +
@@ -1768,7 +1832,7 @@
             '<label>Condition &amp; inclusions<textarea data-t="kelengkapan" rows="2" placeholder="e.g. light scratches on the case, original box, papers"></textarea></label></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Price &amp; buyback deadline</legend>' +
             '<div class="ly-row2"><label>Purchase date<input type="date" data-t="tgl_beli"></label><label>Paid by<select data-t="metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer']], t.metode) + '</select></label></div>' +
-            '<label>Purchase price = buyback price (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-t="harga_beli"></label>' +
+            '<label>Purchase price = buyback price (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-t="harga_beli"></label>' +
             '<label>Buyback deadline<input type="date" data-t="batas_tebus"></label>' +
             '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" data-batas="30">30 days</button><button type="button" class="ly-btn ly-btn--sm" data-batas="60">60 days</button>' + (TB.maksHari >= 90 ? '<button type="button" class="ly-btn ly-btn--sm" data-batas="90">90 days</button>' : '') + '</div>' +
             '<div class="ly-sum" id="tb-sum"></div></fieldset>' +
@@ -1911,9 +1975,9 @@
         app.innerHTML = '<section id="tp" class="ly-f"><div class="ly-head"><a class="ly-back" href="#titip">‹ Consignment</a></div>' +
             '<div class="ly-head"><h1>' + (tp.baru ? 'Take in a consignment' : E(L.namaGitar(t, 'Watch'))) + '</h1>' + (tp.baru ? '' : chipTitip(t)) + '</div>' +
             (tp.baru ? '<p class="ly-muted">The code is created automatically when you save.</p>' : kodeBaris(t, '')) +
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Owner</legend>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
+            '<fieldset class="ly-card ly-f ly-grid"><legend>Owner</legend>' +
             '<label>Name<input data-t="nama" autocomplete="off" required></label>' +
-            '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK / KTP number (optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' +
+            '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK / KTP number (optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
             '<p class="ly-hint">The NIK and ID card photo are optional. If entered, they are stored only in the owner repo and never appear on the website.</p></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend>' +
             '<div class="ly-row2"><label>Movement<select data-t="arloji_jenis">' + opsi(jenis, t.arloji_jenis) + '</select></label><label>Brand / model<input data-t="arloji_merk" placeholder="e.g. Tissot PRX"></label></div>' +
@@ -1921,10 +1985,10 @@
             '<label>Condition &amp; inclusions (becomes the catalogue description)<textarea data-t="kelengkapan" rows="2" placeholder="e.g. light scratches on the case, original box, papers"></textarea></label></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Price &amp; commission</legend>' +
             '<label>Consignment date<input type="date" data-t="tgl_masuk"></label>' +
-            '<div class="ly-row2"><label>Selling price (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-t="harga_jual"></label><label>Minimum price (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-t="harga_min"></label></div>' +
+            '<div class="ly-row2"><label>Selling price (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-t="harga_jual"></label><label>Minimum price (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-t="harga_min"></label></div>' +
             '<p class="ly-hint">Only the shop owner sees the minimum price. The shop never sells below it, and it is the compensation amount if the watch is damaged or lost through the shop’s negligence.</p>' +
-            '<div class="ly-row2"><label>Shop commission (%)<input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-t="komisi_persen"></label><label>Minimum commission (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-t="komisi_min"></label></div>' +
-            '<div class="ly-row2"><label>Selling price above (Rp)<input type="number" inputmode="numeric" min="0" step="1000000" data-t="batas_mahal"></label><label>Commission above that (%)<input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-t="persen_mahal"></label></div>' +
+            '<div class="ly-row2"><label>Shop commission (%)<input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-t="komisi_persen"></label><label>Minimum commission (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-t="komisi_min"></label></div>' +
+            '<div class="ly-row2"><label>Selling price above (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-t="batas_mahal"></label><label>Commission above that (%)<input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-t="persen_mahal"></label></div>' +
             '<div class="ly-sum" id="tp-sum"></div></fieldset>' +
             '<fieldset class="ly-card"><legend>Photos</legend><div id="tp-foto"></div><p class="ly-hint" style="margin-top:10px">Condition photos (dial, caseback, any existing marks) are taken when the watch arrives as proof of condition. The watch photos are reused as product photos when it is added to stock. The ID card photo is optional. All photos are encrypted in the owner repo.</p></fieldset>' +
             '<fieldset class="ly-card ly-f"><legend>Agreement &amp; status</legend>' +
@@ -2091,11 +2155,11 @@
             '<div class="ly-head"><h1>Sell / reserve with deposit</h1></div>' +
             '<fieldset class="ly-card ly-f"><legend>Item</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · stock ' + s.jumlah + ' · price ' + L.rupiah(s.harga_jual) + '</small></p>' +
             '<div class="ly-row2"><label>Qty<input type="number" inputmode="numeric" min="1" max="' + s.jumlah + '" id="jb-qty" value="1"' + (+s.jumlah > 1 ? '' : ' disabled') + '></label>' +
-            '<label>Agreed price per unit (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-harga"></label></div></fieldset>' +
-            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Buyer</legend>' + tombolKontak('#jb-nama', '#jb-hp') + '<div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
-            '<label>WhatsApp number<input id="jb-hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
+            '<label>Agreed price per unit (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="jb-harga"></label></div></fieldset>' +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Buyer</legend><div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
+            '<label>WhatsApp number<input id="jb-hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' + tombolKontak('#jb-nama', '#jb-hp') +
             '<p class="ly-hint" style="margin:0">Required for a deposit (receipt and reminders go by WhatsApp). Can be left empty for a sale paid in full.</p></fieldset>' +
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Payment now</legend><div class="ly-row2"><label>Amount paid (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-bayar"></label>' +
+            '<fieldset class="ly-card ly-f ly-grid"><legend>Payment now</legend><div class="ly-row2"><label>Amount paid (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="jb-bayar"></label>' +
             '<label>Metode<select id="jb-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'tunai') + '</select></label></div>' +
             '<div class="ly-row2"><label>Date<input type="date" id="jb-tgl"></label><label id="jb-batas-l">Pay balance by<input type="date" id="jb-batas"></label></div>' +
             '<label>Note (optional)<input id="jb-ket" placeholder="e.g. free spare strap, shipped by courier"></label>' +
@@ -2150,7 +2214,7 @@
                 : '<div class="ly-total"><span>Balance</span><span>' + L.rupiah(h.sisa) + '</span></div>') +
             (j.status === 'dp' ? '<div><span>Pay balance by</span><span' + (i.lewat ? ' class="ly-telat"' : '') + '>' + L.tgl(j.batas_lunas) + (i.lewat ? ' (overdue ' + -i.sisa + ' days)' : ' (' + i.sisa + ' days left)') + '</span></div>' : '') + '</div>' +
             '<div class="ly-bayar" id="jl-bayar" style="margin-top:10px"></div>' +
-            (j.status === 'dp' ? '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="by-jml"></label>' +
+            (j.status === 'dp' ? '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="by-jml"></label>' +
                 '<label>Metode<select id="by-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'transfer') + '</select></label></div>' +
                 '<div class="ly-row2"><label>Date<input type="date" id="by-tgl"></label><label>Pay balance by<input type="date" id="jl-batas"></label></div>' +
                 '<button type="button" class="ly-btn" id="by-tambah">Record payment</button></div>' : '') + '</fieldset>' +
@@ -2303,14 +2367,14 @@
         app.innerHTML = '<section id="sw" class="ly-f"><div class="ly-head"><a class="ly-back" href="#sewa">‹ Watch rental</a></div><div class="ly-head"><h1>New rental</h1></div>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · price ' + (s.harga_jual ? L.rupiah(s.harga_jual) : 'not set') + '</small></p></fieldset>' +
             barisWa([['unit', 'Send watch &amp; cost estimate', 'Photo poster + rental estimate, deposit, photo link'], ['ketentuan', 'Send rental terms', 'Send once, not for every watch'], ['formulir', 'Send sign-up form', 'Name, WhatsApp, date & rental length'], ['bayar', 'Send payment info', 'Total upfront + bank account']], 'wa') +
-            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Renter</legend>' + tombolKontak('[data-w="nama"]', '[data-w="hp"]') + '<div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Renter</legend><div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' + tombolKontak('[data-w="nama"]', '[data-w="hp"]') +
             '<p class="ly-hint" style="margin:0">Required: the rental receipt and reminders go by WhatsApp.</p></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Rental</legend><div class="ly-row2"><label>Start<input type="date" data-w="tgl_mulai"></label><label>Length (days)<input type="number" inputmode="numeric" min="1" max="' + SWC.maksHari + '" data-w="hari"></label></div>' +
             '<div class="ly-btns" id="sw-cepat">' + [1, 2, 3, 7, 14].map(function (d) { return '<button type="button" class="ly-btn ly-btn--sm" data-hari="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
-            '<div class="ly-row2"><label>Rental fee (Rp)<input type="number" inputmode="numeric" min="0" step="5000" data-w="biaya_custom"></label><label>Deposit (Rp)<input type="number" inputmode="numeric" min="0" step="5000" data-w="deposit_rencana"></label></div>' +
+            '<div class="ly-row2"><label>Rental fee (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-w="biaya_custom"></label><label>Deposit (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-w="deposit_rencana"></label></div>' +
             '<label>Payment method<select id="sw-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'tunai') + '</select></label>' +
             '<p class="ly-hint" style="margin:0">' + (L.tarifStandarUnit(s) ? 'Standard rate: ' + L.ringkasTarifSewa() + '.' : '<b class="ly-warn">Unit ' + L.rupiah(SWC.batasUnitStandar) + ' and above: enter the rental fee yourself.</b>') + ' Deposit awal ' + SWC.depositPersen + '% of the watch price. Both can be changed. The rental fee and deposit are paid upfront.</p>' +
-            '<div class="ly-row2"><label>Rental paid now (Rp)<input type="number" inputmode="numeric" min="0" step="5000" id="sw-bs"></label><label>Deposit received (Rp)<input type="number" inputmode="numeric" min="0" step="50000" id="sw-bd"></label></div>' +
+            '<div class="ly-row2"><label>Rental paid now (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="sw-bs"></label><label>Deposit received (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="sw-bd"></label></div>' +
             '<div class="ly-sum" id="sw-sum"></div></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Condition when it leaves</legend><label>Condition notes (scratches, box, extra strap, etc.)<textarea data-w="kondisi_keluar" rows="2"></textarea></label><div id="sw-foto"></div>' +
             '<p class="ly-hint" style="margin:0">Photograph the watch from several sides before handing it over, in case of a dispute.' + (owner() ? ' The ID card photo (optional) is stored only in the owner repo and never appears on the website.' : '') + '</p></fieldset>' +
@@ -2406,7 +2470,7 @@
             '<div><span>Deposit ' + (aktif ? 'ditahan' : 'diterima') + '</span><span>' + L.rupiah(aktif ? h.ditahan : h.deposit) + '</span></div>' +
             '<div class="ly-total"><span>' + (aktif ? 'Rental currently underpaid' : 'Renter still owes') + '</span><span' + ((aktif ? h.kurang : h.masihHutang) ? ' class="ly-telat"' : '') + '>' + L.rupiah(aktif ? h.kurang : h.masihHutang) + '</span></div></div>' +
             '<div class="ly-bayar" id="sw-bayar" style="margin-top:10px"></div>' +
-            (aktif || h.masihHutang ? '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="number" inputmode="numeric" min="0" step="5000" id="by-jml"></label>' +
+            (aktif || h.masihHutang ? '<div class="ly-f" style="margin-top:10px"><div class="ly-row2"><label>Amount (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="by-jml"></label>' +
                 '<label>Type<select id="by-jenis">' + opsi(aktif ? [['sewa', 'Rental fee'], ['deposit', 'Deposit']] : [['sewa', 'Rental fee']], 'sewa') + '</select></label></div>' +
                 '<div class="ly-row2"><label>Metode<select id="by-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'tunai') + '</select></label><label>Date<input type="date" id="by-tgl"></label></div>' +
                 '<button type="button" class="ly-btn" id="by-tambah">Record payment</button></div>' : '') + '</fieldset>' +
@@ -2465,7 +2529,7 @@
         var w = sw.w, el = $('#sw-selesai-isi'); if (!el) return;
         var metodeDep = (w.bayar.filter(function (b) { return b.jenis === 'deposit'; })[0] || {}).metode || 'tunai';
         el.innerHTML = '<div class="ly-f"><div class="ly-row2"><label>Return date<input type="date" id="sl-tgl"></label><label>Damaged parts (count, ' + L.rupiah(SWC.dendaSenar) + ' each, max ' + SWC.senarCadangan + ' = ' + L.rupiah(SWC.dendaSenar * SWC.senarCadangan) + ')<input type="number" inputmode="numeric" min="0" max="' + SWC.senarCadangan + '" id="sl-senar" value="0"></label></div>' +
-            '<div class="ly-row2"><label>Other damage (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="sl-rugi"></label><label>Other damage details<input id="sl-ket" placeholder="e.g. scratch on the bezel"></label></div>' +
+            '<div class="ly-row2"><label>Other damage (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp id="sl-rugi"></label><label>Other damage details<input id="sl-ket" placeholder="e.g. scratch on the bezel"></label></div>' +
             '<label>Deposit returned by<select id="sl-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], metodeDep) + '</select></label>' +
             '<div class="ly-sum" id="sl-sum"></div><button type="button" class="ly-btn ly-btn--pri" id="sl-ok">Finish rental</button></div>';
         $('#sl-tgl').value = L.hariIni();
@@ -2877,7 +2941,7 @@
             '<label><span id="sk-lbl-warna">' + (aks ? LBL_VARIAN : 'Dial colour') + '</span><input data-s="warna" placeholder="' + (aks ? PH_VARIAN : 'e.g. Silver sunburst') + '"></label>' +
             '<label>Description (condition, specs, inclusions)<textarea data-s="deskripsi" rows="3" placeholder="e.g. 36 mm case, recently serviced, box and papers"></textarea></label></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Price &amp; quantity</legend>' +
-            '<div class="ly-row2">' + (owner() ? '<label>Cost / purchase price per unit (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-s="harga_beli"></label>' : '') + '<label>Selling price (Rp)<input type="number" inputmode="numeric" min="0" step="10000" data-s="harga_jual"></label></div>' +
+            '<div class="ly-row2">' + (owner() ? '<label>Cost / purchase price per unit (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-s="harga_beli"></label>' : '') + '<label>Selling price (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-s="harga_jual"></label></div>' +
             '<div class="ly-row2"><label>Quantity in stock<input type="number" inputmode="numeric" min="0" data-s="jumlah"></label><label>Date in (not shown on the website)<input type="date" data-s="tgl_masuk"></label></div>' +
             (owner() ? '<label>Source (optional, not shown on the website)<input data-s="asal" placeholder="e.g. bought from a customer / supplier / trade-in"></label>' : '') +
             '<label class="ly-cek"><input type="checkbox" id="sk-tampil"> 🌐 Show in the website collection (when in stock and priced)</label>' +
@@ -2949,6 +3013,7 @@
         var el = $('#sk-jual'); if (!el) return; var s = sk.s;
         el.innerHTML = s.penjualan.length ? s.penjualan.map(function (p, i) {
             /* penjualan dari transaksi (pembeli, DP) diatur di halaman transaksinya */
+            if (p.servis_id) return '<div><span>' + L.tgl(p.tgl) + ' · ' + p.qty + ' unit(s) · <a href="#servis/' + E(p.servis_id) + '">' + E(p.catatan) + '</a></span><b>' + L.rupiah(p.harga * p.qty) + '</b></div>';
             if (p.jual_id) { var j = cariId('jual', p.jual_id); return '<div><span>' + L.tgl(p.tgl) + ' · ' + p.qty + ' unit · <a href="#jual/' + E(p.jual_id) + '">' + E(p.catatan) + '</a>' + (j ? ' · ' + E(L.STATUS_JUAL[j.status]) : '') + '</span><b>' + L.rupiah(p.harga * p.qty) + '</b></div>'; }
             return '<div><span>' + L.tgl(p.tgl) + ' · ' + p.qty + ' unit' + (p.catatan ? ' · ' + E(p.catatan) : '') + (p.baru ? ' <small class="ly-muted">(not saved)</small>' : '') + '</span><b>' + L.rupiah(p.harga * p.qty) + '</b><button type="button" class="ly-x" data-deljual="' + i + '" aria-label="Delete">×</button></div>';
         }).join('') : '<p class="ly-muted">No sales yet.</p>';
