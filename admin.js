@@ -1430,6 +1430,12 @@
             ed = { baru: !id, s: s, antri: [] }; gambarServis();
         });
     }
+    /* tombol WhatsApp servis: tanda terima, SATU tombol kabar yang berubah mengikuti status, nota, (pengingat bila Selesai) */
+    function waServis() {
+        var k = L.kabarServis(ed.s);
+        return barisWa([['tandaTerima', 'Drop-off receipt', 'We have received the watch'], ['kabar', k.judul, k.ket], ['nota', 'Send receipt', 'Receipt link & cost breakdown']]
+            .concat(ed.s.status === 'selesai' ? [['pengingat', 'Collection reminder', 'Watch not collected yet']] : []), 'wa');
+    }
     function gambarServis() {
         var s = ed.s, katalog = {}, kat = '';
         C.katalogJasa.forEach(function (k, i) { (katalog[k.grup] = katalog[k.grup] || []).push('<option value="' + i + '">' + E(k.nama) + (k.harga ? ' – ' + L.rupiah(k.harga) : '') + '</option>'); });
@@ -1474,8 +1480,7 @@
             '<fieldset class="ly-card ly-f"><legend>Internal note</legend><label>Only visible in the POS<textarea data-f="catatan_admin" rows="2"></textarea></label></fieldset>' +
 
             (ed.baru ? '<fieldset class="ly-card"><legend>Send to a prospective customer</legend>' + barisWa([['estimasi', 'Send cost estimate', 'Selected work & parts + total + deposit'], ['ketentuan', 'Send service terms', 'One time: deposit, warranty, storage']], 'wc') + '<p class="ly-hint ly-hint--c">No number yet: pick the contact in WhatsApp.</p></fieldset>' : '<fieldset class="ly-card"><legend>Send &amp; more</legend>' +
-                barisWa([['tandaTerima', 'Drop-off receipt', 'We have received the watch'], ['update', 'Update status', 'Send a progress update'], ['selesai', 'Tell them it’s ready', 'Watch ready to collect'], ['nota', 'Send receipt', 'Receipt link & cost breakdown']]
-                    .concat(s.status === 'selesai' ? [['pengingat', 'Collection reminder', 'Watch not collected yet']] : []), 'wa') +
+                '<div id="sv-wa">' + waServis() + '</div>' +
                 '<h3 class="ly-sub">More actions</h3>' +
                 kisiAksi([
                     aksi({ href: 'repair-status.html?k=' + encodeURIComponent(s.kode) + '&amp;h=' + encodeURIComponent(L.hp4(s.hp)), luar: true, ikon: 'lihat', teks: 'View customer page' }),
@@ -1529,11 +1534,11 @@
     function gambarItems() {
         $('#sv-items').innerHTML = ed.s.items.length ? ed.s.items.map(function (it, i) {
             var hapus = '<button type="button" class="ly-x" data-del="' + i + '" aria-label="Delete">×</button>';
-            if (it.jenis === 'part') return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag">Part' + hapus + '</div>' +
+            if (it.jenis === 'part') return '<div class="ly-it ly-it--part" data-i="' + i + '"><div class="ly-it__tag"><span class="ly-pil">Part</span>' + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Part name, e.g. Renata 377 battery" value="' + E(it.nama) + '" aria-label="Part name">' +
                 '<label class="ly-lbl">Qty<input class="ly-in" data-k="qty" type="number" inputmode="numeric" min="1" value="' + (it.qty || 1) + '"></label>' +
                 '<label class="ly-lbl">Unit price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label></div>';
-            return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag">Work' + hapus + '</div>' +
+            return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag"><span class="ly-pil">Work</span>' + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Work description" value="' + E(it.nama) + '" aria-label="Work description">' +
                 '<label class="ly-lbl">Price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label>' +
                 '<label class="ly-lbl">Warranty<select class="ly-in" data-k="garansi">' + opsi(L.GARANSI_PILIHAN, it.garansi || '') + '</select></label>' +
@@ -1605,6 +1610,7 @@
         if (st === 'diambil' && h.sisa > 0 && !confirm('There is still a balance of ' + L.rupiah(h.sisa) + '. Mark as collected?')) return;
         if (st === 'batal' && !confirm('Mark this service job as cancelled? The customer will no longer be able to open its status and receipt.')) return;
         ed.s.status = st; gambarStatus(); gambarRingkas(); setDirty(true);
+        var wa = $('#sv-wa'); if (wa) wa.innerHTML = waServis();
         if (st === 'selesai' && !ed.s.foto.concat(ed.antri).some(function (f) { return f.tahap === 'sesudah'; })) toast('Remember to add after-service photos and advice for the customer.');
     }
     function tambahBayar() {
@@ -1659,7 +1665,7 @@
             if (ed.s.status !== 'selesai') return toast('Collection reminders are only for jobs marked Done.', true);
             return catatPengingat('servis', ed.s.id);
         }
-        bukaWa(ed.s.hp, L.pesan[jenis](ed.s));
+        bukaWa(ed.s.hp, jenis === 'kabar' ? L.kabarServis(ed.s).pesan : L.pesan[jenis](ed.s));
     }
     function jadikanArtikel() {
         if (dirty) return toast('Save your changes first.', true);
