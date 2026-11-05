@@ -1446,9 +1446,10 @@
             '<div class="ly-head"><h1>' + (ed.baru ? 'Watch in' : E(L.namaGitar(s, 'Watch'))) + '</h1>' + (ed.baru ? '' : '<span class="st-chip st-' + s.status + '" id="sv-chip">' + E(L.STATUS[s.status].label) + '</span>') + '</div>' +
             (ed.baru ? '<p class="ly-muted">The service code is created automatically when you save.</p>' : kodeBaris(s)) +
 
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Customer</legend>' + tombolKontak('[data-f="nama"]', '[data-f="hp"]') +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Customer</legend>' + tombolKontak('[data-f="nama"]', '[data-f="hp"]') +
             '<label>Name<input data-f="nama" autocomplete="off" required></label>' +
-            '<label>Phone / WhatsApp<input data-f="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx" required>' + (ed.baru ? '' : '<span class="ly-hint">Changing the phone number changes the 4 digits used to check status; send the link to the customer again.</span>') + '</label></fieldset>' +
+            '<label><span class="ly-lt">Phone / WhatsApp' + (ed.baru ? '' : bantu('tip-hp')) + '</span><input data-f="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx" required></label>' +
+            (ed.baru ? '' : tip('tip-hp', 'Changing the phone number changes the 4 digits used to check status; send the link to the customer again.')) + '</fieldset>' +
 
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend>' +
             '<div class="ly-row2"><label>Movement<select data-f="arloji_jenis">' + opsi(jenis, s.arloji_jenis) + '</select></label>' +
@@ -1469,7 +1470,8 @@
             '<div class="ly-row2"><label>Metode<select id="by-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'tunai') + '</select></label><label>Date<input type="date" id="by-tgl"></label></div>' +
             '<button type="button" class="ly-btn" id="by-tambah">Record payment</button></div></fieldset>' +
 
-            '<fieldset class="ly-card"><legend>Status</legend><div class="ly-status" id="sv-status"></div><div id="sv-titip"></div><p class="ly-hint" style="margin-top:8px">The status moves to <b>Queued</b> automatically once the upfront payment is met.</p></fieldset>' +
+            '<fieldset class="ly-card"><legend>Status</legend><div class="ly-status" id="sv-status"></div><div id="sv-titip"></div><p class="ly-hint" style="margin-top:8px">The status moves to <b>Queued</b> automatically once the upfront payment is met.</p>' +
+            '<h3 class="ly-judul2">Internal note</h3><textarea class="ly-in" data-f="catatan_admin" rows="2" placeholder="Only visible in the POS" aria-label="Internal note (only visible in the POS)"></textarea></fieldset>' +
 
             '<fieldset class="ly-card"><legend>Photos</legend><div id="sv-foto"></div><p class="ly-hint" style="margin-top:10px">Photos are shrunk automatically (WebP ±150 KB) and encrypted before upload. The <b>Shown</b> label means the customer can see it; tap to hide. After-service photos appear to the customer only once the status is Done, side by side with the before photos.</p></fieldset>' +
 
@@ -1477,11 +1479,10 @@
             '<label>Message / update (shown on the status page)<textarea data-f="catatan_publik" rows="3" placeholder="e.g. The mainspring is worn and needs replacing. Estimate moves back 2 days."></textarea></label>' +
             '<label>Advice after service (shown when the status is Done)<textarea data-f="saran" rows="3" placeholder="e.g. The gaskets are ageing; avoid swimming until they are replaced. The strap is worn and can be swapped."></textarea></label></fieldset>' +
 
-            '<fieldset class="ly-card ly-f"><legend>Internal note</legend><label>Only visible in the POS<textarea data-f="catatan_admin" rows="2"></textarea></label></fieldset>' +
 
             (ed.baru ? '<fieldset class="ly-card"><legend>Send to a prospective customer</legend>' + barisWa([['estimasi', 'Send cost estimate', 'Selected work & parts + total + deposit'], ['ketentuan', 'Send service terms', 'One time: deposit, warranty, storage']], 'wc') + '<p class="ly-hint ly-hint--c">No number yet: pick the contact in WhatsApp.</p></fieldset>' : '<fieldset class="ly-card"><legend>Send &amp; more</legend>' +
                 '<div id="sv-wa">' + waServis() + '</div>' +
-                '<h3 class="ly-sub">More actions</h3>' +
+                '</fieldset><fieldset class="ly-card"><legend>More actions</legend>' +
                 kisiAksi([
                     aksi({ href: 'repair-status.html?k=' + encodeURIComponent(s.kode) + '&amp;h=' + encodeURIComponent(L.hp4(s.hp)), luar: true, ikon: 'lihat', teks: 'View customer page' }),
                     aksi({ id: 'sv-cetak', ikon: 'cetak', teks: 'Print drop-off receipt + tag' }),
@@ -1490,7 +1491,7 @@
                 '<p class="ly-hint ly-hint--c">The customer page updates about 1 minute after saving.</p></fieldset>') +
 
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="sv-simpan">' + (ed.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
-        susunDua(['Payments', 'Status', 'Internal note', 'Kirim', 'More actions', 'More']);
+        susunDua(['Payments', 'Status', 'Kirim', 'More actions', 'More']);
 
         $$('[data-f]', app).forEach(function (el) {
             var v = s[el.dataset.f];
@@ -1534,11 +1535,11 @@
     function gambarItems() {
         $('#sv-items').innerHTML = ed.s.items.length ? ed.s.items.map(function (it, i) {
             var hapus = '<button type="button" class="ly-x" data-del="' + i + '" aria-label="Delete">×</button>';
-            if (it.jenis === 'part') return '<div class="ly-it ly-it--part" data-i="' + i + '"><div class="ly-it__tag"><span class="ly-pil">Part</span>' + hapus + '</div>' +
+            if (it.jenis === 'part') return '<div class="ly-it ly-it--part" data-i="' + i + '"><div class="ly-it__tag">Part' + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Part name, e.g. Renata 377 battery" value="' + E(it.nama) + '" aria-label="Part name">' +
                 '<label class="ly-lbl">Qty<input class="ly-in" data-k="qty" type="number" inputmode="numeric" min="1" value="' + (it.qty || 1) + '"></label>' +
                 '<label class="ly-lbl">Unit price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label></div>';
-            return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag"><span class="ly-pil">Work</span>' + hapus + '</div>' +
+            return '<div class="ly-it" data-i="' + i + '"><div class="ly-it__tag">Work' + hapus + '</div>' +
                 '<input class="ly-in ly-it__n" data-k="nama" placeholder="Work description" value="' + E(it.nama) + '" aria-label="Work description">' +
                 '<label class="ly-lbl">Price (Rp)<input class="ly-in" data-k="harga" type="number" inputmode="numeric" min="0" step="1000" value="' + (it.harga || 0) + '"></label>' +
                 '<label class="ly-lbl">Warranty<select class="ly-in" data-k="garansi">' + opsi(L.GARANSI_PILIHAN, it.garansi || '') + '</select></label>' +
@@ -1781,14 +1782,14 @@
                     .concat(t.status === 'aktif' ? [['pengingat', 'Buyback reminder', 'Remind them of the buyback deadline']] : [])
                     .concat(t.status === 'ditebus' ? [['ditebus', 'Thank you (bought back)', 'Confirm the watch was bought back']] : [])
                     .concat(t.status === 'milik_toko' ? [['berakhir', 'Buyback period ended', 'Tell them the watch now belongs to the shop']] : []), 'wat') +
-                '<h3 class="ly-sub">More actions</h3>' +
+                '</fieldset><fieldset class="ly-card"><legend>More actions</legend>' +
                 kisiAksi([].concat(t.status === 'milik_toko' && !t.stok_id ? [aksi({ id: 'tb-kestok', ikon: 'stok', teks: 'Add to stock', kelas: 'ly-akt--pri' })] : [])
                     .concat(t.stok_id ? [aksi({ href: '#stok/' + E(t.stok_id), ikon: 'stok', teks: 'View in stock' })] : [])
                     .concat([aksi({ href: 'agreement.html?k=' + encodeURIComponent(t.kode) + '&amp;h=' + encodeURIComponent(L.hp4(t.hp)), luar: true, ikon: 'surat', teks: 'Open / print agreement' }),
                         aksi({ id: 'tb-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })])) +
                 '<p class="ly-hint ly-hint--c">The agreement on the website updates about 1 minute after saving.</p></fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="tb-simpan">' + (te.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
-        susunDua(['Persetujuan', 'Kirim']);
+        susunDua(['Persetujuan', 'Kirim', 'More actions']);
         $$('[data-t]', app).forEach(function (el) { var v = t[el.dataset.t]; el.value = v == null ? '' : v; });
         $('#tb-setuju').checked = !!t.disetujui;
         gambarSumTebus(); gambarStatusTebus(); gambarFotoTebus(); setDirty(false);
@@ -1934,13 +1935,13 @@
                 barisWa([['konfirmasi', 'Consignment terms & ask for AGREE', 'Send the consignment terms to the owner']]
                     .concat(t.status === 'aktif' ? [['pengingat', 'Review price', 'Ask the owner about the selling price']] : [])
                     .concat(t.status === 'diambil' ? [['diambil', 'Watch returned to owner', 'Confirm the owner has collected the watch']] : []), 'wat') +
-                '<h3 class="ly-sub">More actions</h3>' +
+                '</fieldset><fieldset class="ly-card"><legend>More actions</legend>' +
                 kisiAksi([].concat(t.status === 'aktif' && !t.stok_id ? [aksi({ id: 'tp-kestok', ikon: 'stok', teks: 'Add to stock &amp; catalogue', kelas: 'ly-akt--pri' })] : [])
                     .concat(t.stok_id ? [aksi({ href: '#stok/' + E(t.stok_id), ikon: 'stok', teks: 'View in stock' })] : [])
                     .concat([aksi({ id: 'tp-cetak', ikon: 'cetak', teks: 'Print consignment receipt' }), aksi({ id: 'tp-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })])) +
                 '<p class="ly-hint ly-hint--c">Selling through Checkout and paying the owner are coming soon.</p></fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="tp-simpan">' + (tp.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
-        susunDua(['Persetujuan', 'Kirim']);
+        susunDua(['Persetujuan', 'Kirim', 'More actions']);
         $$('[data-t]', app).forEach(function (el) { var v = t[el.dataset.t]; el.value = v == null ? '' : v; });
         $('#tp-setuju').checked = !!t.disetujui;
         gambarSumTitip(); gambarStatusTitip(); gambarFotoTitip(); setDirty(false);
@@ -2091,7 +2092,7 @@
             '<fieldset class="ly-card ly-f"><legend>Item</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · stock ' + s.jumlah + ' · price ' + L.rupiah(s.harga_jual) + '</small></p>' +
             '<div class="ly-row2"><label>Qty<input type="number" inputmode="numeric" min="1" max="' + s.jumlah + '" id="jb-qty" value="1"' + (+s.jumlah > 1 ? '' : ' disabled') + '></label>' +
             '<label>Agreed price per unit (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-harga"></label></div></fieldset>' +
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Buyer</legend>' + tombolKontak('#jb-nama', '#jb-hp') + '<div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Buyer</legend>' + tombolKontak('#jb-nama', '#jb-hp') + '<div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
             '<label>WhatsApp number<input id="jb-hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
             '<p class="ly-hint" style="margin:0">Required for a deposit (receipt and reminders go by WhatsApp). Can be left empty for a sale paid in full.</p></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Payment now</legend><div class="ly-row2"><label>Amount paid (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-bayar"></label>' +
@@ -2302,7 +2303,7 @@
         app.innerHTML = '<section id="sw" class="ly-f"><div class="ly-head"><a class="ly-back" href="#sewa">‹ Watch rental</a></div><div class="ly-head"><h1>New rental</h1></div>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Watch</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · price ' + (s.harga_jual ? L.rupiah(s.harga_jual) : 'not set') + '</small></p></fieldset>' +
             barisWa([['unit', 'Send watch &amp; cost estimate', 'Photo poster + rental estimate, deposit, photo link'], ['ketentuan', 'Send rental terms', 'Send once, not for every watch'], ['formulir', 'Send sign-up form', 'Name, WhatsApp, date & rental length'], ['bayar', 'Send payment info', 'Total upfront + bank account']], 'wa') +
-            '<fieldset class="ly-card ly-f ly-grid"><legend>Renter</legend>' + tombolKontak('[data-w="nama"]', '[data-w="hp"]') + '<div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
+            '<fieldset class="ly-card ly-f ly-grid ly-grid--2"><legend>Renter</legend>' + tombolKontak('[data-w="nama"]', '[data-w="hp"]') + '<div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
             '<p class="ly-hint" style="margin:0">Required: the rental receipt and reminders go by WhatsApp.</p></fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Rental</legend><div class="ly-row2"><label>Start<input type="date" data-w="tgl_mulai"></label><label>Length (days)<input type="number" inputmode="numeric" min="1" max="' + SWC.maksHari + '" data-w="hari"></label></div>' +
             '<div class="ly-btns" id="sw-cepat">' + [1, 2, 3, 7, 14].map(function (d) { return '<button type="button" class="ly-btn ly-btn--sm" data-hari="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
