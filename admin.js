@@ -135,10 +135,10 @@
         if (typeof a.postMessage === 'function') a.postMessage(JSON.stringify(Object.assign({ op: op }, d)));
         else if (op === 'bagikan') a.bagikan(d.nama, d.mime, d.b64, d.teks);
     }
-    /* cetak langsung ke printer thermal Bluetooth: aplikasi AYRI POS versi 1.3.0 ke atas */
+    /* cetak langsung ke printer thermal Bluetooth: aplikasi Jubeli POS, semua versi (penomorannya mulai dari 1.0.0, beda dengan AYRI POS) */
     function bisaCetakBt() {
         var m = /AyriApp\/(\d+)\.(\d+)/.exec(navigator.userAgent);
-        return !!m && adaAplikasi() && typeof window.AyriApp.postMessage === 'function' && (+m[1] > 1 || (+m[1] === 1 && +m[2] >= 3));
+        return !!m && adaAplikasi() && typeof window.AyriApp.postMessage === 'function' && +m[1] >= 1;
     }
     /* cetak baris struk 58 mm (Layanan.strukThermal / strukServis): ke printer Bluetooth lewat aplikasi, atau lewat dialog cetak browser */
     function cetakBaris(baris) {
