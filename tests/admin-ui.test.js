@@ -21,10 +21,10 @@ test('artikel terbit bisa dibagikan: poster 1080x1920 + teks + tautan, tombol di
     assert.match(kode, /if \(a\.status !== 'terbit'\) return toast\('Only published articles/, 'draf tidak bisa dibagikan');
     assert.match(kode, /\(a\.status === 'terbit' \? '<span class="ly-item__b">' \+ tombolIkon\('link-ar', a\.id, 'tautan', /, 'tombol ikon hanya di artikel terbit');
     assert.match(kode, /tombolIkon\('bagikan-ar', a\.id, 'kirim', 'Share Story poster'\)/);
-    assert.match(kode, /function bagikanLinkArtikel\(a\)/); assert.match(kode, /navigator\.share\(\{ title: a\.judul, url: url \}\)/, 'tautan saja, tanpa gambar');
+    assert.match(kode, /function bagikanLinkArtikel\(a\)/); assert.match(kode, /navigator\.share\(\{ title: judul, url: url \}\)/, 'tautan saja, tanpa gambar');
     const tautan = kode.slice(kode.indexOf('function bagikanLinkArtikel'), kode.indexOf('function bagikanArtikel'));
     assert.match(tautan, /kirimKeAplikasi\('bagikanTeks'/, 'aplikasi baru: menu bagikan Android');
-    assert.match(tautan, /navigator\.share\(\{ title: a\.judul, url: url \}\)/, 'browser: menu bagikan bawaan');
+    assert.match(tautan, /navigator\.share\(\{ title: judul, url: url \}\)/, 'browser: menu bagikan bawaan');
     assert.match(tautan, /else salinLink\(url\)/, 'tanpa menu bagikan: tautan disalin');
     assert.doesNotMatch(tautan, /bukaWa/, 'tidak lagi memaksa WhatsApp');
     assert.match(kode, /\+m\[2\] === 4 && \+\(m\[3\] \|\| 0\) >= 1/, 'bagikanTeks: aplikasi 1.4.1 ke atas (1.4.0 belum punya op itu)');
@@ -65,4 +65,14 @@ test('tombol ikon: berlabel untuk pembaca layar, tetap berikon saat sibuk, ikon 
     assert.match(kode, /\n {8}kirim: '<path/); assert.match(kode, /\n {8}tautan: '<path/);
     assert.match(css, /\.ly-btn--ikon \{ width: 40px;/);
     assert.ok(!/>Story<\/button>|>Link<\/button>|>SOLD poster<\/button>/.test(kode), 'tidak ada lagi tombol bertulisan Link/Story/Poster SOLD di daftar');
+});
+
+test('menu bawah Servis rapi (kartu aksi, tanpa Reload data ganda) dan tombol link unit di daftar stok', () => {
+    const kode = baca('admin.js'), servis = kode.slice(kode.indexOf('function daftarServis()'), kode.indexOf('function gambarDaftar()'));
+    assert.ok(!/Reload data|b-muat/.test(servis), 'muat ulang sudah ada di tombol segarkan header');
+    for (const id of ['b-cadang', 'b-buka-cad', 'b-pin', 'b-lupa']) assert.match(servis, new RegExp("id: '" + id + "'"), id);
+    assert.match(servis, /<legend>Backup &amp; security<\/legend>/);
+    assert.match(servis, /id: 'b-lupa', ikon: 'hapus', teks: 'Remove token from this device', kelas: 'ly-akt--del'/, 'tombol berbahaya terpisah dan merah');
+    assert.match(kode, /L\.diKatalog\(s\) \? tombolIkon\('tautan-sk', s\.id, 'tautan', 'Share item link'\)/, 'link unit hanya untuk stok yang tampil di katalog');
+    assert.match(kode, /bagikanTautan\(L\.judulStok\(st\), L\.urlUnit\(st\.kode\)\)/, 'memakai pembagi tautan universal yang sama dengan artikel');
 });

@@ -27,6 +27,9 @@
         nota: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
         artikel: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
         hapus: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+        unduh: '<path d="M12 4v11"/><path d="M8 11.5l4 4 4-4"/><path d="M5 19.5h14"/>',
+        buka: '<path d="M12 20V9"/><path d="M8 12.5l4-4 4 4"/><path d="M5 4.5h14"/>',
+        kunci: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
         kirim: '<path d="M12 15V4"/><path d="M8 7.5 12 3.5l4 4"/><path d="M6.5 11H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-.5"/>',
         tautan: '<path d="M10.5 8H8a4 4 0 0 0 0 8h2.5"/><path d="M13.5 8H16a4 4 0 0 1 0 8h-2.5"/><path d="M8.5 12h7"/>',
         bagikan: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>',
@@ -1199,7 +1202,10 @@
         app.innerHTML = '<section><div class="ly-head"><h1>Service queue</h1><div class="ly-seg" id="tampilan" role="group" aria-label="View"><button type="button" data-v="papan">Board</button><button type="button" data-v="daftar">List</button></div><a class="ly-btn ly-btn--pri" href="#servis/baru">+ Watch in</a></div>' +
             '<div class="ly-cari"><input class="ly-in" id="cari" type="search" placeholder="Search code, name, phone, brand…" autocomplete="off"></div>' +
             '<div id="ingat"></div><div class="ly-filter" id="filter"></div><div class="ly-list" id="list"></div>' +
-            '<div class="ly-btns" style="margin-top:18px"><button type="button" class="ly-btn ly-btn--sm" id="b-muat">Reload data</button><button type="button" class="ly-btn ly-btn--sm" id="b-cadang">Download backup</button><button type="button" class="ly-btn ly-btn--sm" id="b-buka-cad">Open backup</button><button type="button" class="ly-btn ly-btn--sm" id="b-pin">Change PIN</button><button type="button" class="ly-btn ly-btn--sm ly-btn--del" id="b-lupa">Remove token from this device</button></div></section>';
+            '<fieldset class="ly-card" style="margin-top:18px"><legend>Backup &amp; security</legend>' + kisiAksi([
+                aksi({ id: 'b-cadang', ikon: 'unduh', teks: 'Download backup' }), aksi({ id: 'b-buka-cad', ikon: 'buka', teks: 'Open backup' }),
+                aksi({ id: 'b-pin', ikon: 'kunci', teks: 'Change PIN', kelas: 'ly-akt--lebar' }),
+                aksi({ id: 'b-lupa', ikon: 'hapus', teks: 'Remove token from this device', kelas: 'ly-akt--del' })]) + '</fieldset></section>';
         $('#cari').value = cari;
         $('#cari').addEventListener('input', function () { cari = this.value; gambarDaftar(); });
         $('#filter').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; gambarDaftar(); } });
@@ -1210,7 +1216,6 @@
             var k = e.target.closest('[data-kasir]'); if (k) { e.preventDefault(); keKasir(k.dataset.kasir); }
         });
         $('#tampilan').addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; tampilSv = b.dataset.v; try { localStorage.setItem('jubeli-admin-tampilan', tampilSv); } catch (x) {} gambarDaftar(); });
-        $('#b-muat').addEventListener('click', function () { var b = this; sibuk(b, true, 'Loading…'); A.muat().then(function (d) { cache = d; sibuk(b, false); gambarDaftar(); toast('Latest data loaded.'); }).catch(function (e) { sibuk(b, false); gagal(e); }); });
         $('#b-cadang').addEventListener('click', function () { unduhCadangan(); });
         $('#b-buka-cad').addEventListener('click', bukaCadanganUi);
         $('#b-pin').addEventListener('click', gantiPinUi);
@@ -2318,6 +2323,7 @@
     var LBL_VARIAN = 'Variant / reference (optional)', PH_VARIAN = 'e.g. 20 mm, brown leather';
     function tombolKartuStok(s) {
         var b = (SEWA_AKTIF && L.bisaDisewa(s, cache.sewa) ? '<button type="button" class="ly-btn ly-btn--sm" data-sewa="' + E(s.id) + '">Rent</button>' : '') +
+            (L.diKatalog(s) ? tombolIkon('tautan-sk', s.id, 'tautan', 'Share item link') : '') +
             (adaStok(s) && s.harga_jual ? tombolIkon('tawar', s.id, 'kirim', 'Share poster & offer') : '') +
             (bisaPosterSold(s) ? tombolIkon('sold', s.id, 'kirim', 'Share SOLD poster') : '');
         return b ? '<span class="ly-item__b">' + b + '</span>' : '';
@@ -2331,7 +2337,7 @@
         $('#cari').value = cariSk;
         $('#cari').addEventListener('input', function () { cariSk = this.value; gambarDaftarStok(); });
         $('#filter').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filterSk = b.dataset.f; gambarDaftarStok(); } });
-        $('#list').addEventListener('click', function (e) { var sb = e.target.closest('[data-sewa]'); if (sb) { e.preventDefault(); pindah('#sewa/baru/' + sb.dataset.sewa); return; } var b = e.target.closest('[data-tawar]'); if (b) { e.preventDefault(); bagikanStok(cariId('stok', b.dataset.tawar), b); return; } var so = e.target.closest('[data-sold]'); if (so) { e.preventDefault(); bagikanTerjual(cariId('stok', so.dataset.sold), so); } });
+        $('#list').addEventListener('click', function (e) { var sb = e.target.closest('[data-sewa]'); if (sb) { e.preventDefault(); pindah('#sewa/baru/' + sb.dataset.sewa); return; } var b = e.target.closest('[data-tawar]'); if (b) { e.preventDefault(); bagikanStok(cariId('stok', b.dataset.tawar), b); return; } var so = e.target.closest('[data-sold]'); if (so) { e.preventDefault(); bagikanTerjual(cariId('stok', so.dataset.sold), so); return; } var tl = e.target.closest('[data-tautan-sk]'); if (tl) { e.preventDefault(); var st = cariId('stok', tl.dataset.tautanSk); bagikanTautan(L.judulStok(st), L.urlUnit(st.kode)); } });
         gambarDaftarStok();
     }
     function adaStok(s) { return s.status === 'tersedia' || s.status === 'dipesan'; }
@@ -2481,10 +2487,12 @@
     /* WhatsApp / chat: cukup TAUTAN (tampil sebagai kartu pratinjau yang bisa diketuk). Di browser lewat menu bagikan; di aplikasi & PC lewat WhatsApp tanpa nomor */
     function bagikanLinkArtikel(a) {
         if (a.status !== 'terbit') return toast('Only published articles can be shared.', true);
-        var url = urlArtikel(a);
-        /* menu bagikan HP yang universal (WhatsApp, Instagram, Telegram, SMS, dll): lewat aplikasi AYRI POS 1.4.1+ atau menu bagikan browser; bila tidak ada, tautan disalin */
-        if (bisaBagikanTeksApp()) kirimKeAplikasi('bagikanTeks', { teks: a.judul + '\n' + url });
-        else if (navigator.share) navigator.share({ title: a.judul, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') salinLink(url); });
+        bagikanTautan(a.judul, urlArtikel(a));
+    }
+    /* menu bagikan HP yang universal (WhatsApp, Instagram, Telegram, SMS, dll): lewat aplikasi AYRI POS 1.4.1+ atau menu bagikan browser; bila tidak ada, tautan disalin */
+    function bagikanTautan(judul, url) {
+        if (bisaBagikanTeksApp()) kirimKeAplikasi('bagikanTeks', { teks: judul + '\n' + url });
+        else if (navigator.share) navigator.share({ title: judul, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') salinLink(url); });
         else salinLink(url);
     }
     function bisaBagikanTeksApp() {
