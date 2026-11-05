@@ -110,7 +110,7 @@
     }
     function kisiAksi(daftar) { return '<div class="ly-aksi">' + daftar.join('') + '</div>'; }
     function owner() { return A.peran() === 'owner'; }
-    function setDirty(v) { dirty = v; var d = $('#dirty'); if (d) d.hidden = !v; }
+    function setDirty(v) { dirty = v; var d = $('#dirty'); if (d) d.hidden = !v; if (ae && $('#ar')) { if (v) jadwalDraf(); else { clearTimeout(jadwalDraf.t); jadwalDraf.t = null; var t = $('#ar-draf'); if (t) t.textContent = ''; } } }
     function opsi(list, cur) { return list.map(function (o) { var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + E(v) + '"' + (String(v) === String(cur == null ? '' : cur) ? ' selected' : '') + '>' + E(t) + '</option>'; }).join(''); }
     /* pilih pelanggan dari kontak HP. Di browser: Contact Picker API (Chrome Android, HTTPS, dari ketukan). Di aplikasi AYRI POS 1.4.0 ke atas:
        pemilih kontak bawaan Android lewat jembatan (op pilihKontak), hasilnya datang sebagai peristiwa 'jubeli-kontak'. Hanya satu kontak yang dipilih yang terbaca. */
@@ -3087,21 +3087,31 @@
     function bukaArtikel(id) {
         ambilCatatan('artikel', id, artikelKosong, function (a) {
             a.foto = a.foto || [];
-            ae = { baru: !id, a: a, slugManual: !!id, servis: a.servis_id && cariId('servis', a.servis_id) || null }; gambarArtikel();
+            ae = { baru: !id, a: a, slugManual: !!id, servis: a.servis_id && cariId('servis', a.servis_id) || null };
+            /* tulisan yang belum tersimpan (aplikasi tertutup, sinyal putus): ditawarkan untuk dipulihkan */
+            var dr = bacaDraf(a.id);
+            if (dr && JSON.stringify(isiDraf(dr.a)) !== JSON.stringify(isiDraf(a))) ae.draf = dr; else if (dr) buangDraf(a.id);
+            gambarArtikel();
         });
     }
     function gambarArtikel() {
         var a = ae.a, url = L.situs() + 'journal-' + a.slug + '.html', terbit = !ae.baru && cache.artikel.some(function (x) { return x.id === a.id && x.status === 'terbit'; });
         app.innerHTML = '<section id="ar" class="ly-f"><div class="ly-head"><a class="ly-back" href="#artikel">‹ Journal</a></div>' +
             '<div class="ly-head"><h1>' + (ae.baru ? 'New article' : 'Edit article') + '</h1></div>' +
+            (ae.draf ? '<div class="ly-card ar-pulih" id="ar-pulih" role="status"><p><b>Unsaved writing</b> found on this device (' + E(waktuDraf(ae.draf.waktu)) + ').' +
+                (ae.draf.dasar !== (a.updated_at || '') ? ' This article was changed again after that, so check the text before saving.' : '') + '</p>' +
+                '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm ly-btn--pri" id="ar-pulihkan">Restore writing</button><button type="button" class="ly-btn ly-btn--sm" id="ar-buang">Discard</button></div></div>' : '') +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Title &amp; address</legend>' +
             '<label>Title<input data-a="judul" maxlength="140" placeholder="e.g. Seiko 5 full service"></label>' +
             '<label>Page address<input data-a="slug" pattern="[a-z0-9-]+" autocapitalize="off"><span class="ly-hint" id="ar-url"></span></label>' +
             '<div class="ly-row2"><label>Label<input data-a="tag" maxlength="40"></label><label>Status<select data-a="status">' + opsi([['draf', 'Draft'], ['terbit', 'Published']], a.status) + '</select></label></div>' +
             '<label>Summary for Google (max. 160 characters)<textarea data-a="ringkasan" rows="2" maxlength="160"></textarea><span class="ly-hint" id="ar-n"></span></label></fieldset>' +
-            '<fieldset class="ly-card ly-f"><legend>Article text</legend>' +
-            '<p class="ly-hint">Format: <b>## Section heading</b>, <b>- bullet</b>, <b>**bold**</b>, <b>_italic_</b>, <b>[text](https://address)</b>, blank line = new paragraph.</p>' +
-            '<textarea data-a="isi" rows="16"></textarea><div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" id="ar-prev">Preview</button></div><div class="ly-prev" id="ar-pv" hidden></div></fieldset>' +
+            '<fieldset class="ly-card ly-f ar-isi"><legend>Article text</legend>' +
+            '<div class="ar-alat" role="toolbar" aria-label="Text formatting"><div class="ar-alat__md">' + ALAT_MD.map(function (x) { return '<button type="button" class="ar-md" data-md="' + x[0] + '" aria-label="' + x[1] + '" title="' + x[1] + (x[3] ? ' (' + x[3] + ')' : '') + '">' + x[2] + '</button>'; }).join('') + '</div>' +
+            '<button type="button" class="ly-btn ly-btn--sm ar-pvbtn" id="ar-prev" aria-pressed="false">' + IKON_MD.mata + '<span>Preview</span></button></div>' +
+            '<div class="ar-tulis" id="ar-tulis"><textarea data-a="isi" rows="16" aria-label="Article text" placeholder="Start writing here.&#10;&#10;## Section heading&#10;Opening paragraph…&#10;&#10;- first point&#10;- second point"></textarea><div class="ly-prev" id="ar-pv" hidden aria-label="Article preview"></div></div>' +
+            '<div class="ar-kaki"><span id="ar-kata"></span><span id="ar-draf" aria-live="polite"></span></div>' +
+            '<p class="ly-hint" style="margin:0">Select some text and press a button above, or type directly: <b>## section heading</b>, <b>- bullet</b>, <b>**bold**</b>, <b>_italic_</b>, <b>[text](https://address)</b>. A blank line = new paragraph.</p>' +
             '<fieldset class="ly-card"><legend>Photos</legend><div class="ly-afoto" id="ar-foto"></div><div id="ar-pick"></div>' +
             '<div class="ly-btns" style="margin-top:10px"><label class="ly-btn ly-btn--sm ly-file">+ Upload photo<input type="file" accept="image/*" multiple id="ar-file"></label></div>' +
             '<p class="ly-hint" style="margin-top:8px">The first photo is the cover. Add a short caption to each photo (it helps Google). Make sure there are no faces, receipts, or watch serial numbers. Journal photos are public.</p></fieldset>' +
@@ -3110,9 +3120,23 @@
                 .concat([aksi({ id: 'ar-hapus', ikon: 'hapus', teks: 'Delete article', kelas: 'ly-akt--del' })])) + '</fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="ar-simpan">Save</button></div></section>';
         susunDua(['More']);
+        /* PC: isi & foto selebar halaman (di bawah judul + tombol simpan), supaya tulisan dan pratinjau muat berdampingan */
+        var dua = $('.ly-dua', app);
+        if (dua) [$('.ar-isi', app), $('#ar-foto', app).closest('fieldset')].reduce(function (sblm, el) { dua.parentNode.insertBefore(el, sblm.nextSibling); return el; }, dua);
         $$('[data-a]', app).forEach(function (el) { el.value = a[el.dataset.a] == null ? '' : a[el.dataset.a]; });
         infoArtikel(); gambarAFoto(); setDirty(false);
-        var ar = $('#ar');
+        aturPratinjau(ae.pv == null ? layarLebar() && prefPratinjau() : ae.pv);
+        var ar = $('#ar'), ta = $('[data-a="isi"]');
+        $('.ar-alat__md').addEventListener('mousedown', function (e) { if (e.target.closest('[data-md]')) e.preventDefault(); }); /* kursor & keyboard HP tetap di kotak isi */
+        ta.addEventListener('keydown', function (e) {
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+            var j = { b: 'tebal', i: 'miring', k: 'tautan' }[e.key.toLowerCase()];
+            if (j) { e.preventDefault(); terapkanFormat(j); }
+        });
+        ta.addEventListener('scroll', function () { /* pratinjau ikut bergulir sebanding */
+            var pv = $('#ar-pv'); if (pv.hidden || !$('#ar-tulis').classList.contains('ar-tulis--dua')) return;
+            var r = ta.scrollTop / Math.max(1, ta.scrollHeight - ta.clientHeight); pv.scrollTop = r * (pv.scrollHeight - pv.clientHeight);
+        });
         ar.addEventListener('input', function (e) {
             var t = e.target, k = t.dataset.a, i = t.dataset.alt;
             if (k) {
@@ -3136,7 +3160,10 @@
             var t = e.target.closest('button'); if (!t) return; var d = t.dataset;
             if (t.id === 'ar-link') { if (dirty) return toast('Save your changes first.', true); bagikanLinkArtikel(cariId('artikel', a.id)); }
             else if (t.id === 'ar-bagikan') { if (dirty) return toast('Save your changes first.', true); bagikanArtikel(cariId('artikel', a.id), t); }
-            else if (t.id === 'ar-prev') { var pv = $('#ar-pv'); pv.hidden = !pv.hidden; t.textContent = pv.hidden ? 'Preview' : 'Close preview'; if (!pv.hidden) pratinjau(); }
+            else if (t.id === 'ar-prev') { var buka = $('#ar-pv').hidden; aturPratinjau(buka); if (layarLebar()) try { localStorage.setItem('jubeli-ar-pratinjau', buka ? '1' : '0'); } catch (x) {} }
+            else if (d.md) terapkanFormat(d.md);
+            else if (t.id === 'ar-pulihkan') { var dr = ae.draf; ae.draf = null; Object.assign(ae.a, dr.a); ae.slugManual = true; gambarArtikel(); setDirty(true); toast('Writing restored. Check it, then Save.'); }
+            else if (t.id === 'ar-buang') { if (!confirm('Discard that unsaved writing?')) return; ae.draf = null; if (!dirty) buangDraf(a.id); var pb = $('#ar-pulih'); if (pb) pb.remove(); }
             else if (d.fdel != null) { a.foto.splice(+d.fdel, 1); gambarAFoto(); setDirty(true); }
             else if (d.fup != null) { var i = +d.fup; if (i > 0) { var x = a.foto[i]; a.foto[i] = a.foto[i - 1]; a.foto[i - 1] = x; gambarAFoto(); setDirty(true); } }
             else if (d.pick) {
@@ -3157,13 +3184,60 @@
         });
         $('#ar-simpan').addEventListener('click', simpanArtikel);
         if (!ae.baru) $('#ar-hapus').addEventListener('click', function () {
-            if (confirm('Delete this article? If it is published, its page is removed from the website too.')) hapusData('artikel', a, this, A.hapusArtikel, 'Article deleted.');
+            if (confirm('Delete this article? If it is published, its page is removed from the website too.')) { buangDraf(a.id); hapusData('artikel', a, this, A.hapusArtikel, 'Article deleted.'); }
         });
     }
     function infoArtikel() {
-        var a = ae.a; $('#ar-url').textContent = 'jubeliwatch.github.io/journal-' + (a.slug || '…') + '.html';
+        var a = ae.a, h = ArtikelMd.hitung(a.isi); $('#ar-url').textContent = 'jubeliwatch.github.io/journal-' + (a.slug || '…') + '.html';
         $('#ar-n').textContent = (a.ringkasan || '').length + '/160';
+        $('#ar-kata').textContent = h.kata ? h.kata + ' words · ~' + h.menit + ' min read' + (h.kata < 300 ? ' · Google prefers 300+ words' : '') : 'Nothing written yet';
     }
+    /* ---- editor isi: tombol format, pratinjau berdampingan (PC), cadangan draf di perangkat ---- */
+    var IKON_MD = {
+        poin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></svg>',
+        nomor: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h10M10 12h10M10 18h10M4 4.5h1.5V9M3.6 14.2c.4-.6 1-.9 1.6-.9.8 0 1.4.5 1.4 1.2 0 1.2-3 2.1-3 3.5h3"/></svg>',
+        kutip: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14M9 7h11M9 12h11M9 17h7"/></svg>',
+        tautan: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5a4.5 4.5 0 0 0 6.4.4l2.8-2.8a4.5 4.5 0 0 0-6.4-6.4l-1.3 1.3M14 10.5a4.5 4.5 0 0 0-6.4-.4l-2.8 2.8a4.5 4.5 0 0 0 6.4 6.4l1.3-1.3"/></svg>',
+        mata: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>'
+    };
+    var ALAT_MD = [['tebal', 'Bold', '<b>B</b>', 'Ctrl+B'], ['miring', 'Italic', '<i>I</i>', 'Ctrl+I'], ['judul', 'Section heading', '<span class="ar-md__t">Heading</span>'], ['sub', 'Subheading', '<span class="ar-md__t ar-md__t--s">Sub</span>'],
+        ['poin', 'Bullet list', IKON_MD.poin], ['nomor', 'Numbered list', IKON_MD.nomor], ['kutip', 'Quote / note', IKON_MD.kutip], ['tautan', 'Link', IKON_MD.tautan, 'Ctrl+K']];
+    function layarLebar() { return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }
+    function prefPratinjau() { try { return localStorage.getItem('jubeli-ar-pratinjau') !== '0'; } catch (e) { return true; } }
+    function aturPratinjau(buka) {
+        var pv = $('#ar-pv'), b = $('#ar-prev'); if (!pv) return;
+        ae.pv = !!buka; pv.hidden = !buka; $('#ar-tulis').classList.toggle('ar-tulis--dua', !!buka);
+        b.setAttribute('aria-pressed', String(!!buka)); b.lastChild.textContent = buka ? 'Close preview' : 'Preview';
+        if (buka) pratinjau();
+    }
+    function terapkanFormat(jenis) {
+        var ta = $('[data-a="isi"]'); if (!ta) return;
+        var h = ArtikelMd.format(ta.value, ta.selectionStart, ta.selectionEnd, jenis); if (!h) return;
+        ta.focus(); ta.setSelectionRange(h.dari, h.sampai);
+        var ok = false;
+        try { ok = h.sisip !== '' && document.execCommand('insertText', false, h.sisip); } catch (e) { ok = false; } /* insertText: Ctrl+Z tetap bisa membatalkan */
+        if (!ok || ta.value.slice(h.dari, h.dari + h.sisip.length) !== h.sisip) { ta.setRangeText(h.sisip, h.dari, h.sampai, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+        ta.setSelectionRange(h.pilihA, h.pilihB);
+    }
+    var KUNCI_DRAF = 'jubeli-draf-artikel:';
+    function kunciDraf(id) { return KUNCI_DRAF + (id || 'baru'); }
+    function isiDraf(a) { return { judul: a.judul || '', slug: a.slug || '', tag: a.tag || '', ringkasan: a.ringkasan || '', isi: a.isi || '', status: a.status || 'draf', foto: a.foto || [] }; }
+    function bacaDraf(id) { try { var d = JSON.parse(localStorage.getItem(kunciDraf(id)) || 'null'); return d && d.a ? d : null; } catch (e) { return null; } }
+    function buangDraf(id) { try { localStorage.removeItem(kunciDraf(id)); } catch (e) { /* abaikan */ } }
+    function waktuDraf(iso) { var d = new Date(iso); return isNaN(d) ? 'unknown time' : d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    function jadwalDraf() { clearTimeout(jadwalDraf.t); jadwalDraf.t = setTimeout(simpanDrafLokal, 1000); }
+    function simpanDrafLokal() {
+        jadwalDraf.t = null;
+        var el = $('#ar-draf'); if (!ae || !el || !dirty) return;
+        var waktu = new Date().toISOString();
+        try {
+            localStorage.setItem(kunciDraf(ae.a.id), JSON.stringify({ a: isiDraf(ae.a), waktu: waktu, dasar: ae.a.updated_at || '' }));
+            el.textContent = '✓ Draft saved on this device · ' + new Date(waktu).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); el.classList.remove('ar-draf--gagal');
+        } catch (e) { el.textContent = 'The draft cannot be backed up on this device. Save regularly.'; el.classList.add('ar-draf--gagal'); }
+    }
+    /* aplikasi ditutup / pindah aplikasi: cadangkan sekarang juga */
+    document.addEventListener('visibilitychange', function () { if (document.hidden && jadwalDraf.t) { clearTimeout(jadwalDraf.t); simpanDrafLokal(); } });
+    window.addEventListener('pagehide', function () { if (jadwalDraf.t) { clearTimeout(jadwalDraf.t); simpanDrafLokal(); } });
     function isiGambar(el) { $$('img[data-af]', el).forEach(function (img) { var f = ae.a.foto[+img.dataset.af]; if (f) A.fotoArtikel(f).then(function (u) { img.src = u; }, function () { img.alt = 'Photo not found'; }); }); }
     function pratinjau() {
         var a = ae.a; if (!$('#ar-pv')) return;
@@ -3197,6 +3271,7 @@
             if (a.foto.some(function (f) { return !String(f.alt || '').trim(); })) return toast('Add a caption to every photo first.', true);
         }
         prosesSimpan('artikel', $('#ar-simpan'), a.status === 'terbit' ? 'Publishing…' : 'Saving…', function () { return A.simpanArtikel(a); }, function (row) {
+            clearTimeout(jadwalDraf.t); jadwalDraf.t = null; buangDraf(ae.baru ? null : row.id); buangDraf(row.id);
             toast(row.status === 'terbit' ? 'Published! The article page will be live in about 1 minute.' : 'Draft saved.');
             if (ae.baru) pindah('#artikel/' + row.id); else { ae.a = salin(row); ae.slugManual = true; gambarArtikel(); }
         });
