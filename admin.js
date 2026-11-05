@@ -3095,7 +3095,7 @@
         app.innerHTML = '<section id="ar" class="ly-f"><div class="ly-head"><a class="ly-back" href="#artikel">‹ Journal</a></div>' +
             '<div class="ly-head"><h1>' + (ae.baru ? 'New article' : 'Edit article') + '</h1></div>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Title &amp; address</legend>' +
-            '<label>Judul<input data-a="judul" maxlength="140" placeholder="e.g. Seiko 5 full service"></label>' +
+            '<label>Title<input data-a="judul" maxlength="140" placeholder="e.g. Seiko 5 full service"></label>' +
             '<label>Page address<input data-a="slug" pattern="[a-z0-9-]+" autocapitalize="off"><span class="ly-hint" id="ar-url"></span></label>' +
             '<div class="ly-row2"><label>Label<input data-a="tag" maxlength="40"></label><label>Status<select data-a="status">' + opsi([['draf', 'Draft'], ['terbit', 'Published']], a.status) + '</select></label></div>' +
             '<label>Summary for Google (max. 160 characters)<textarea data-a="ringkasan" rows="2" maxlength="160"></textarea><span class="ly-hint" id="ar-n"></span></label></fieldset>' +
@@ -3193,7 +3193,7 @@
         if (a.status === 'terbit') {
             if (!a.isi.trim()) return toast('The article text is empty.', true);
             if (/\((Describe|Write)[^)]*\)/.test(a.isi) && !confirm('There is still placeholder text in brackets (e.g. “(Describe the result…)”). Publish anyway?')) return;
-            if (!a.ringkasan.trim()) a.ringkasan = ArtikelMd.teksPolos(a.isi).slice(0, 157) + '…';
+            if (!(a.ringkasan || '').trim()) a.ringkasan = ArtikelMd.teksPolos(a.isi).slice(0, 157) + '…';
             if (a.foto.some(function (f) { return !String(f.alt || '').trim(); })) return toast('Add a caption to every photo first.', true);
         }
         prosesSimpan('artikel', $('#ar-simpan'), a.status === 'terbit' ? 'Publishing…' : 'Saving…', function () { return A.simpanArtikel(a); }, function (row) {

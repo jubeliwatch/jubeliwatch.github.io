@@ -13,7 +13,7 @@ const servis = [{
     id: 'sv1', kode: 'JBW-K7M2PQ', nama: 'Rian Saputra', hp: '0813 2222 3333', tgl_masuk: hari, arloji_jenis: 'Akustik', arloji_merk: 'Taylor 214ce',
     keluhan: 'Action tinggi, fret buzz di senar 1', status: 'dikerjakan', diskon: 0, estimasi: hari, created_at: '2026-10-20T00:00:00.000Z', updated_at: '2026-10-20T00:00:00.000Z',
     items: [{ jenis: 'jasa', nama: 'Full Setup (Akustik)', harga: 350000, qty: 1, garansi: '7h' }, { jenis: 'part', nama: 'Senar Elixir 12', harga: 180000, qty: 1 }],
-    bayar: [{ id: 'b1', tgl: hari, jumlah: 355000, jenis: 'dp', metode: 'tunai' }], foto: [], fk: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+    bayar: [{ id: 'b1', tgl: hari, jumlah: 355000, jenis: 'dp', metode: 'tunai' }], izin_publikasi: true, foto: [{ id: 'f1', tahap: 'arloji', path: 'foto/stok/uji.webp', thumb_path: 'foto/stok/uji-k.webp', tipe: 'image/webp', repo: 'publik', created_at: '2026-10-21T00:00:00.000Z' }], fk: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
 }];
 const stok = [{
     id: 'sk1', kode: 'STK-V9FPZW', kategori: 'arloji', arloji_jenis: 'Bass', arloji_merk: 'Fender Aerodyne', warna: 'Hitam Glossy', kondisi: 'bekas', tingkat: 'excellent', jumlah: 1, status: 'tersedia', tampil: true,
