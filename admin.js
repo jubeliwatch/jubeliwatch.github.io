@@ -2694,51 +2694,60 @@
         if (n === 2) return [{ x: 60, y: 235, w: 470, h: 760 }, { x: 550, y: 235, w: 470, h: 760 }];
         return [{ x: 60, y: 235, w: 570, h: 760 }, { x: 650, y: 235, w: 370, h: 370 }, { x: 650, y: 625, w: 370, h: 370 }];
     }
-    function buatPosterArtikel(a) {
-        var pilihan = fotoPosterArtikel(a), sampul = fotoArtikelPublik(a)[0];
-        var daftar = pilihan.length ? pilihan : sampul ? [{ f: sampul, label: '' }] : [];
-        var fonts = Promise.all(['700 70px Fraunces', '700 40px "Plus Jakarta Sans"'].map(function (f) { return document.fonts && document.fonts.load ? document.fonts.load(f) : null; }));
+    /* Poster foto Jubeliwatch (Story 1080x1920): dipakai poster artikel dan poster servis.
+       o: daftar [{f,label}], muat(d) -> Promise gambar, tag, judul, maksJudul, ringkas (paragraf) ATAU butir (baris pendek), ajakan.
+       Sisi kanan (x 640-1020, y 1538-1628) dikosongkan untuk stiker tautan Instagram yang ditambahkan manual. */
+    function susunPosterFoto(o) {
+        var fonts = Promise.all(['700 70px "Playfair Display"', '700 40px "DM Sans"'].map(function (f) { return document.fonts && document.fonts.load ? document.fonts.load(f) : null; }));
         fonts = Promise.race([fonts, new Promise(function (ok) { setTimeout(ok, 1200); })]).catch(function () {});
-        function muat(d) { return muatGambar(L.situs() + d.f.path, 'no-cache').catch(function () { return null; }); }
-        return Promise.all([Promise.all(daftar.map(muat)), muatGambar(L.situs() + 'logo/jubeli-logo-putih.svg').catch(function () { return null; }), fonts]).then(function (r) {
+        return Promise.all([Promise.all(o.daftar.map(o.muat)), muatGambar(L.situs() + 'logo/jubeli-logo-putih.svg').catch(function () { return null; }), fonts]).then(function (r) {
             var im = r[0], logo = r[1];
-            var cv = document.createElement('canvas'), W = 1080, H = 1920, EMAS = '#E0A95C', SERIF = 'Fraunces, Georgia, serif', SANS = '"Plus Jakarta Sans", system-ui, sans-serif';
+            var cv = document.createElement('canvas'), W = 1080, H = 1920, EMAS = '#D2B27A', SERIF = 'Playfair Display, Georgia, serif', SANS = '"DM Sans", system-ui, sans-serif';
             cv.width = W; cv.height = H;
             var c = cv.getContext('2d'), g = c.createLinearGradient(0, 0, 0, H), wa = '0' + String(C.toko.wa).slice(2);
             wa = wa.replace(/^(\d{4})(\d{4})(\d+)$/, '$1-$2-$3'); c.textBaseline = 'alphabetic';
-            g.addColorStop(0, '#1d1812'); g.addColorStop(1, '#0d0a07'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-            var gl = c.createRadialGradient(W / 2, 620, 60, W / 2, 620, 760); gl.addColorStop(0, 'rgba(224,169,92,.20)'); gl.addColorStop(1, 'rgba(224,169,92,0)'); c.fillStyle = gl; c.fillRect(0, 0, W, 1300);
+            g.addColorStop(0, '#5a6650'); g.addColorStop(1, '#262b1f'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+            c.fillStyle = '#f4f0e8'; c.font = '600 54px ' + SERIF; c.textAlign = 'center'; c.fillText('jubeli', W / 2 - c.measureText('watch').width / 2, 170); c.fillStyle = EMAS; c.fillText('watch', W / 2 + c.measureText('jubeli').width / 2, 170); c.textAlign = 'left';
+            var gl = c.createRadialGradient(W / 2, 620, 60, W / 2, 620, 760); gl.addColorStop(0, 'rgba(210,178,122,.22)'); gl.addColorStop(1, 'rgba(210,178,122,0)'); c.fillStyle = gl; c.fillRect(0, 0, W, 1300);
             /* foto utuh (tidak dipotong), dipusatkan di selnya; bingkai mengikuti ukuran foto */
             function bingkai(foto, sel, label) {
                 var k = Math.min(sel.w / foto.width, sel.h / foto.height), w = foto.width * k, h = foto.height * k, x = sel.x + (sel.w - w) / 2, y = sel.y + (sel.h - h) / 2;
                 c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 36; c.shadowOffsetY = 12; rect(c, x, y, w, h, 28); c.fillStyle = '#000'; c.fill(); c.restore();
                 c.save(); rect(c, x, y, w, h, 28); c.clip(); c.drawImage(foto, x, y, w, h); c.restore();
-                rect(c, x, y, w, h, 28); c.strokeStyle = 'rgba(224,169,92,.55)'; c.lineWidth = 3; c.stroke();
+                rect(c, x, y, w, h, 28); c.strokeStyle = 'rgba(210,178,122,.55)'; c.lineWidth = 3; c.stroke();
                 if (label) {
-                    c.font = '800 ' + (w < 300 ? 20 : 24) + 'px ' + SANS; var lw = c.measureText(label).width + 36; rect(c, x + 14, y + 14, lw, 42, 21); c.fillStyle = 'rgba(13,10,7,.8)'; c.fill();
+                    c.font = '800 ' + (w < 300 ? 20 : 24) + 'px ' + SANS; var lw = c.measureText(label).width + 36; rect(c, x + 14, y + 14, lw, 42, 21); c.fillStyle = 'rgba(38,43,31,.85)'; c.fill();
                     c.fillStyle = EMAS; c.fillText(label, x + 32, y + 43);
                 }
             }
-            var sel = selFotoPoster(Math.max(1, daftar.length)), ada = 0;
-            im.forEach(function (foto, n) { if (foto) { bingkai(foto, sel[n], daftar[n].label); ada++; } });
+            var sel = selFotoPoster(Math.max(1, o.daftar.length)), ada = 0;
+            im.forEach(function (foto, n) { if (foto) { bingkai(foto, sel[n], o.daftar[n].label); ada++; } });
             if (!ada && logo) { var lw0 = 240, lh0 = lw0 * logo.height / logo.width; c.globalAlpha = .25; c.drawImage(logo, 60 + (960 - lw0) / 2, 235 + (760 - lh0) / 2, lw0, lh0); c.globalAlpha = 1; }
-            /* label + judul + ringkasan */
-            var cy = 1020, tag = String(a.tag || 'Journal').toUpperCase(); c.font = '800 28px ' + SANS;
-            var bw = c.measureText(tag).width + 52; rect(c, 60, cy, bw, 56, 28); c.fillStyle = EMAS; c.fill(); c.fillStyle = '#1a1510'; c.fillText(tag, 86, cy + 38);
+            /* label + judul + isi */
+            var cy = 1020, tag = String(o.tag).toUpperCase(); c.font = '800 28px ' + SANS;
+            var bw = c.measureText(tag).width + 52; rect(c, 60, cy, bw, 56, 28); c.fillStyle = EMAS; c.fill(); c.fillStyle = '#262b1f'; c.fillText(tag, 86, cy + 38);
             c.fillStyle = '#fff'; c.font = '700 64px ' + SERIF;
-            var y = 1156; barisTeks(c, a.judul, 960, 3).forEach(function (b) { c.fillText(b, 60, y); y += 74; });
-            var rs = ringkasArtikel(a);
-            if (rs) { c.fillStyle = '#d8cfc3'; c.font = '500 32px ' + SANS; barisTeks(c, rs, 960, Math.max(0, Math.min(4, Math.floor((1500 - y) / 44)))).forEach(function (b) { y += 44; c.fillText(b, 60, y); }); }
-            /* penutup: logo, ajakan membaca, WhatsApp, alamat. Sisi kanan (x 640-1020, y 1538-1628) dikosongkan untuk stiker tautan Instagram yang ditambahkan manual */
-            c.fillStyle = 'rgba(224,169,92,.35)'; c.fillRect(60, 1528, 960, 2);
+            var y = 1156; barisTeks(c, o.judul, 960, o.maksJudul || 3).forEach(function (b) { c.fillText(b, 60, y); y += 74; });
+            if (o.ringkas) { c.fillStyle = '#d8cfc3'; c.font = '500 32px ' + SANS; barisTeks(c, o.ringkas, 960, Math.max(0, Math.min(4, Math.floor((1500 - y) / 44)))).forEach(function (b) { y += 44; c.fillText(b, 60, y); }); }
+            if (o.butir) { c.fillStyle = '#d8cfc3'; c.font = '600 34px ' + SANS; o.butir.slice(0, Math.max(0, Math.floor((1500 - y) / 46))).forEach(function (b) { y += 46; c.fillText(barisTeks(c, b, 960, 1)[0], 60, y); }); }
+            /* penutup: logo, ajakan, WhatsApp, alamat */
+            c.fillStyle = 'rgba(210,178,122,.35)'; c.fillRect(60, 1528, 960, 2);
             var tx = 60; if (logo) { var lh1 = 120, lw1 = lh1 * logo.width / logo.height; c.drawImage(logo, 60, 1546, lw1, lh1); tx = 60 + lw1 + 32; }
             c.fillStyle = '#25D366'; c.beginPath(); c.arc(tx + 24, 1584, 24, 0, 7); c.fill();
             c.save(); c.translate(tx + 24 - 14, 1584 - 14); c.scale(28 / 24, 28 / 24); c.fillStyle = '#fff'; c.fill(new Path2D(WA_IKON.match(/ d="([^"]+)"/)[1])); c.restore();
             c.fillStyle = '#fff'; c.font = '800 42px ' + SANS; c.fillText(wa, tx + 64, 1598);
             var web = L.situs().replace(/^https?:\/\//, '').replace(/\/$/, '');
-            c.fillStyle = EMAS; c.font = '700 30px ' + SANS; c.fillText('Read at ' + web, tx, 1642);
+            c.fillStyle = EMAS; c.font = '700 30px ' + SANS; c.fillText(o.ajakan + web, tx, 1642);
             c.fillStyle = '#b9ad9d'; c.font = '500 24px ' + SANS; c.fillText(barisTeks(c, C.toko.alamat, 1020 - tx, 1)[0], tx, 1672);
             return new Promise(function (ok, gagal) { cv.toBlob(function (b) { b ? ok(b) : gagal(new Error('Could not create the image.')); }, 'image/jpeg', .85); });
+        });
+    }
+    function buatPosterArtikel(a) {
+        var pilihan = fotoPosterArtikel(a), sampul = fotoArtikelPublik(a)[0];
+        var daftar = pilihan.length ? pilihan : sampul ? [{ f: sampul, label: '' }] : [];
+        return susunPosterFoto({
+            daftar: daftar, muat: function (d) { return muatGambar(L.situs() + d.f.path, 'no-cache').catch(function () { return null; }); },
+            tag: a.tag || 'Journal', judul: a.judul, ringkas: ringkasArtikel(a), ajakan: 'Read at '
         });
     }
     /* ---------- poster servis untuk pemasaran (Story WhatsApp / Instagram) ----------
@@ -2764,20 +2773,12 @@
         return d;
     }
     function buatPosterServis(o) {
-        var s = o.s, mode = o.mode, daftar = fotoPosterServis(s, mode), judul = L.namaGitar(s, 'Watch'), jasa = jasaPoster(s), tag = mode === 'proses' ? 'IN PROGRESS' : 'SERVICE RESULT';
-        return Promise.all([Promise.all(daftar.map(function (d) { return muatFotoPoster(s, d.f).catch(function () { return null; }); })), muatLogoPoster(), siapFontPoster()]).then(function (r) {
-            var im = r[0], logo = r[1][0], kv = kanvasPoster(judul + tag), c = kv.c, jl = barisJudul(c, judul, 2);
-            c.font = '600 34px ' + SANS;
-            var baris = jasa.slice(0, 5).map(function (n) { return barisTeks(c, '•  ' + n, 980, 1)[0]; });
-            if (jasa.length > 5) baris.push('and ' + (jasa.length - 5) + ' other jobs');
-            var fh = tinggiFoto(70 + jl.length * 76 + 48 + (baris.length ? baris.length * 46 + 8 : 0)), sel = selFotoPoster(Math.max(1, daftar.length), fh), ada = 0;
-            im.forEach(function (foto, n) { if (foto) { bingkaiFoto(c, foto, sel[n], daftar[n].label); ada++; } });
-            if (!ada) fotoKosong(c, r[1][1], sel[0]);
-            var y = 215 + fh + 44; lencana(c, 50, y, tag); y += 70;
-            y = garisEmas(c, judulPoster(c, jl, y));
-            c.fillStyle = TEMA.tinta2; c.font = '600 34px ' + SANS; baris.forEach(function (b) { y += 46; c.fillText(b, 50, y - 6); });
-            pitaBawah(c, logo, 'Watch service at ');
-            return jpegPoster(kv.cv);
+        var s = o.s, mode = o.mode, daftar = fotoPosterServis(s, mode), jasa = jasaPoster(s);
+        var butir = jasa.length > 5 ? jasa.slice(0, 4).concat('and ' + (jasa.length - 4) + ' other jobs') : jasa;
+        return susunPosterFoto({
+            daftar: daftar, muat: function (d) { return muatFotoPoster(s, d.f).catch(function () { return null; }); },
+            tag: mode === 'proses' ? 'In progress' : 'Service result', judul: L.namaGitar(s, 'Watch'), maksJudul: 2,
+            butir: butir.map(function (n) { return '•  ' + n; }), ajakan: 'Watch service at '
         });
     }
     function teksPosterServis(s, mode) {
