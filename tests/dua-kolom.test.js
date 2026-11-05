@@ -21,3 +21,11 @@ test('isian ringkas: ikon penjelasan (i) menggantikan paragraf bantuan, dan isia
     assert.match(css, /@media \(min-width: 1000px\) \{\s+\.ly-grid \{ grid-template-columns: repeat\(6/, 'berdampingan hanya di layar lebar');
     assert.match(css, /\.ly-tip\[hidden\] \{ display: none; \}/);
 });
+
+test('menu "Lainnya" (admin.html): gaya ly-lembar__in tetap ada dan tidak ikut terganti nama saat panel filter dipisah', () => {
+    const css = baca('layanan.css'), html = baca('admin.html');
+    assert.match(html, /class="ly-card ly-lembar__in"/);
+    assert.match(css, /\.ly-lembar__in \{ display: grid; grid-template-columns: repeat\(3/, 'kotak menu 3 kolom');
+    assert.match(css, /\.ly-lembar__in svg \{ width: 24px; height: 24px;/, 'ikon menu berukuran 24px (bukan raksasa)');
+    assert.ok(!/ly-pnl__in/.test(css), 'tidak ada sisa nama ly-pnl__in');
+});
