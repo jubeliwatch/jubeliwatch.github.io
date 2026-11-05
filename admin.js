@@ -2755,8 +2755,8 @@
             /* dikecilkan satu per satu (hemat memori HP), lalu diunggah sekaligus dalam satu commit */
             var hasil = [];
             files.reduce(function (p, file) { return p.then(function () { return L.kompres(file, { kecil: false }).then(function (h) { hasil.push(h); }); }); }, Promise.resolve())
-                .then(function () { return A.unggahFotoArtikel(hasil); })
-                .then(function (paths) { paths.forEach(function (p) { a.foto.push({ path: p, alt: '' }); }); gambarAFoto(); setDirty(true); toast('Photo uploaded. Add its caption, then Save.'); }).catch(gagal);
+                .then(function () { return A.unggahFotoArtikel(hasil, ArtikelMd.slug(a.slug || a.judul || '')); })
+                .then(function (paths) { paths.forEach(function (p) { a.foto.push({ path: p, alt: a.judul ? a.judul + ' – photo ' + (a.foto.length + 1) : '' }); /* keterangan awal dari judul (bisa diubah) */ }); gambarAFoto(); setDirty(true); toast('Photo uploaded. Add its caption, then Save.'); }).catch(gagal);
         });
         $('#ar-simpan').addEventListener('click', simpanArtikel);
         if (!ae.baru) $('#ar-hapus').addEventListener('click', function () {

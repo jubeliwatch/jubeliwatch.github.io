@@ -1170,6 +1170,13 @@
     L.tingkatStok = function (s) { return s.kategori !== 'aksesoris' && s.kondisi === 'bekas' && L.TINGKAT[s.tingkat] ? L.TINGKAT[s.tingkat] : ''; };
     /* jam tangan dinamai merk + model saja, mis. "Aigner Palermo" */
     L.judulStok = function (s) { return L.namaStok(s); };
+    /* nama file foto publik yang deskriptif (SEO): huruf kecil, tanda minus, tanpa nomor seri / harga / data pelanggan */
+    L.slugFoto = function (t, maks) {
+        var s = String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        if (maks && s.length > maks) s = (s.slice(0, maks).replace(/-[^-]*$/, '') || s.slice(0, maks)).replace(/^-+|-+$/g, '');
+        return s;
+    };
+    L.namaFotoStok = function (s) { return L.slugFoto(L.judulStok(s) + ' ' + (s.warna || ''), 60) + (s.kode ? '-' + String(s.kode).toLowerCase() : ''); };
     L.STATUS_STOK = { tersedia: 'In stock', dipesan: 'Reserved', terjual: 'Sold', ditarik: 'Withdrawn' };
     L.namaStok = function (s) { return s.kategori === 'aksesoris' ? (s.nama || 'Accessories') : (s.arloji_merk || s.arloji_jenis || 'Watch'); };
     L.jenisStok = function (s) { return s.kategori === 'aksesoris' ? (s.sub || 'Accessories') : (s.arloji_jenis || 'Watch'); };
@@ -1196,15 +1203,19 @@
     }
     /* tautan halaman satu unit (dibagikan ke calon pembeli/penyewa): unit/<kode>.html memuat pratinjau WhatsApp lalu meneruskan ke unit.html */
     L.urlUnit = function (kode) { return L.situs() + 'unit/' + encodeURIComponent(kode) + '.html'; };
-    var VERSI_HALAMAN_UNIT = 1; /* naikkan bila bentuk halaman pratinjau berubah: semua halaman dibuat ulang pada simpan stok berikutnya */
+    var VERSI_HALAMAN_UNIT = 2; /* naikkan bila bentuk halaman pratinjau berubah: semua halaman dibuat ulang pada simpan stok berikutnya */
     function judulKatalog(x) { return x.nama; }
     /* halaman pratinjau kecil per unit: tag Open Graph + data produk supaya tautan tampil dengan foto & harga di WhatsApp/Google; pengunjung diteruskan ke unit.html */
+    /* teks alt foto produk: judul + warna + kondisi bekas + nomor foto, tanpa pengulangan kata kunci */
+    L.altKatalog = function (x, n) {
+        return judulKatalog(x) + (x.warna ? ' ' + x.warna : '') + (x.kategori === 'arloji' && x.kondisi === 'bekas' ? ' pre-owned' + (x.tingkat ? ' ' + x.tingkat : '') : '') + (n ? ' – photo ' + n : '');
+    };
     L.halamanUnit = function (x) {
         var e = L.esc, judul = judulKatalog(x), url = L.urlUnit(x.kode), tujuan = 'unit.html?k=' + encodeURIComponent(x.kode);
         var kondisi = x.kategori === 'arloji' ? (x.kondisi === 'baru' ? 'New' : 'Pre-owned' + (x.tingkat ? ' ' + x.tingkat : '')) : x.jenis;
         var deskripsi = [kondisi, x.warna].filter(Boolean).join(' · ') + ' – ' + L.rupiah(x.harga) + '. Available at ' + C.toko.nama + ' Bogor.';
         var gambar = L.situs() + (x.foto[0] ? x.foto[0].src : 'icon-512.png');
-        var ld = { '@context': 'https://schema.org', '@type': 'Product', name: judul, sku: x.kode, description: x.deskripsi || deskripsi, image: x.foto.map(function (f) { return L.situs() + f.src; }),
+        var ld = { '@context': 'https://schema.org', '@type': 'Product', name: judul, sku: x.kode, description: x.deskripsi || deskripsi, image: x.foto.map(function (f, i) { return { '@type': 'ImageObject', contentUrl: L.situs() + f.src, name: L.altKatalog(x), caption: L.altKatalog(x, i + 1) }; }),
             offers: { '@type': 'Offer', url: url, price: x.harga, priceCurrency: 'IDR', availability: 'https://schema.org/' + (x.status === 'dipesan' ? 'LimitedAvailability' : 'InStock'),
                 itemCondition: 'https://schema.org/' + (x.kondisi === 'bekas' ? 'UsedCondition' : 'NewCondition'), seller: { '@type': 'Organization', name: C.toko.nama } } };
         return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
@@ -1228,8 +1239,8 @@
             return files;
         });
     }
-    function fotoPublikStok(besar, kecil, tipe, files, sekarang) {
-        var nama = acakHex(10), ext = tipe === 'image/jpeg' ? '.jpg' : '.webp', p = 'foto/stok/' + nama + ext, pk = 'foto/stok/' + nama + '-k' + ext;
+    function fotoPublikStok(besar, kecil, tipe, files, sekarang, dasar) {
+        var nama = (dasar ? dasar + '-' : '') + acakHex(3), ext = tipe === 'image/jpeg' ? '.jpg' : '.webp', p = 'foto/stok/' + nama + ext, pk = 'foto/stok/' + nama + '-k' + ext;
         return Promise.all([besar.arrayBuffer(), kecil.arrayBuffer()]).then(function (buf) {
             var f = { id: nama, tahap: 'arloji', path: p, thumb_path: pk, tipe: tipe, repo: 'publik', created_at: sekarang };
             files.push({ path: p, base64: b64(buf[0]) }, { path: pk, base64: b64(buf[1]) });
@@ -1243,6 +1254,7 @@
         rec.kategori = rec.kategori || 'arloji';
         if (rec.kategori === 'aksesoris') rec.kondisi = 'baru'; /* aksesoris selalu baru: tidak ada pilihan kondisi */
         rec.foto = rec.foto || []; rec.penjualan = rec.penjualan || []; rec.updated_at = sekarang;
+        var namaDasar = L.namaFotoStok(rec); /* foto baru diberi nama dari merk/model, warna, dan kode */
         /* habis tapi masih ditahan pesanan DP: tetap Dipesan */
         if (rec.status !== 'ditarik') rec.status = +rec.jumlah > 0 ? (rec.status === 'dipesan' ? 'dipesan' : 'tersedia') : (rec.status === 'dipesan' ? 'dipesan' : 'terjual');
         /* foto lama yang masih terenkripsi (dari tebus / versi sebelumnya) dijadikan foto produk publik; file lamanya
@@ -1250,11 +1262,11 @@
         return cekBentrok('stok', rec, dasar, lama).then(function () {
             return Promise.all(rec.foto.map(function (f) {
                 if (f.repo === 'publik') return f;
-                return Promise.all([fotoMentah(rec, f, true), fotoMentah(rec, f, false)]).then(function (b) { return fotoPublikStok(b[0], b[1], f.tipe, files.situs, sekarang); });
+                return Promise.all([fotoMentah(rec, f, true), fotoMentah(rec, f, false)]).then(function (b) { return fotoPublikStok(b[0], b[1], f.tipe, files.situs, sekarang, namaDasar); });
             }));
         }).then(function (foto) {
             rec.foto = foto;
-            return Promise.all((fotoBaru || []).map(function (fb) { return fotoPublikStok(fb.hasil.besar, fb.hasil.kecil, fb.hasil.besar.type, files.situs, sekarang); }));
+            return Promise.all((fotoBaru || []).map(function (fb) { return fotoPublikStok(fb.hasil.besar, fb.hasil.kecil, fb.hasil.besar.type, files.situs, sekarang, namaDasar); }));
         }).then(function (fotoTambah) {
             rec.foto = rec.foto.concat(fotoTambah);
             hapusFotoHilang(lama, rec, files);
@@ -1540,8 +1552,9 @@
         return (lama && lama.status === 'terbit' ? terbitkan(Object.assign({}, lama, { status: 'draf' }), lama) : Promise.resolve()).then(function () { return simpanDaftar('artikel', art, true); });
     };
     /* foto artikel bersifat publik (tidak dienkripsi); beberapa foto sekaligus dalam satu commit */
-    L.api.unggahFotoArtikel = function (daftarHasil) {
-        var paths = daftarHasil.map(function (h) { return 'foto/artikel/' + acakHex(10) + (h.besar.type === 'image/webp' ? '.webp' : '.jpg'); });
+    L.api.unggahFotoArtikel = function (daftarHasil, dasar) {
+        dasar = L.slugFoto(dasar, 70); /* nama file dari judul artikel */
+        var paths = daftarHasil.map(function (h) { return 'foto/artikel/' + (dasar ? dasar + '-' : '') + acakHex(3) + (h.besar.type === 'image/webp' ? '.webp' : '.jpg'); });
         return Promise.all(daftarHasil.map(function (h) { return h.besar.arrayBuffer(); })).then(function (bufs) {
             return commit('situs', bufs.map(function (b, i) { return { path: paths[i], base64: b64(b) }; }), 'Journal: upload photo');
         }).then(function () {
@@ -1567,7 +1580,7 @@
             var x = fotoServisArtikel(f);
             if (!x) throw new Error('The service photo for this article was not found.');
             return fotoMentah(x.s, x.f, true).then(function (b) { return b.arrayBuffer(); }).then(function (buf) {
-                var p2 = 'foto/artikel/' + acakHex(10) + (x.f.tipe === 'image/jpeg' ? '.jpg' : '.webp');
+                var p2 = 'foto/artikel/' + L.slugFoto(art.slug + ' ' + (f.poster || ''), 70) + '-' + acakHex(3) + (x.f.tipe === 'image/jpeg' ? '.jpg' : '.webp');
                 fotoFile.push({ path: p2, base64: b64(buf) }); art.foto[i] = { path: p2, alt: f.alt || '' };
             });
         })).then(function () {
