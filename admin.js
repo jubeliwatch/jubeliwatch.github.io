@@ -2314,7 +2314,8 @@
     var LBL_VARIAN = 'Variant / reference (optional)', PH_VARIAN = 'e.g. 20 mm, brown leather';
     function tombolKartuStok(s) {
         var b = (SEWA_AKTIF && L.bisaDisewa(s, cache.sewa) ? '<button type="button" class="ly-btn ly-btn--sm" data-sewa="' + E(s.id) + '">Rent</button>' : '') +
-            (adaStok(s) && s.harga_jual ? '<button type="button" class="ly-btn ly-btn--sm" data-tawar="' + E(s.id) + '">Share</button>' : '');
+            (adaStok(s) && s.harga_jual ? '<button type="button" class="ly-btn ly-btn--sm" data-tawar="' + E(s.id) + '">Share</button>' : '') +
+            (bisaPosterSold(s) ? '<button type="button" class="ly-btn ly-btn--sm" data-sold="' + E(s.id) + '">SOLD poster</button>' : '');
         return b ? '<span class="ly-item__b">' + b + '</span>' : '';
     }
     function daftarStok() {
@@ -2326,7 +2327,7 @@
         $('#cari').value = cariSk;
         $('#cari').addEventListener('input', function () { cariSk = this.value; gambarDaftarStok(); });
         $('#filter').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filterSk = b.dataset.f; gambarDaftarStok(); } });
-        $('#list').addEventListener('click', function (e) { var sb = e.target.closest('[data-sewa]'); if (sb) { e.preventDefault(); pindah('#sewa/baru/' + sb.dataset.sewa); return; } var b = e.target.closest('[data-tawar]'); if (b) { e.preventDefault(); bagikanStok(cariId('stok', b.dataset.tawar), b); } });
+        $('#list').addEventListener('click', function (e) { var sb = e.target.closest('[data-sewa]'); if (sb) { e.preventDefault(); pindah('#sewa/baru/' + sb.dataset.sewa); return; } var b = e.target.closest('[data-tawar]'); if (b) { e.preventDefault(); bagikanStok(cariId('stok', b.dataset.tawar), b); return; } var so = e.target.closest('[data-sold]'); if (so) { e.preventDefault(); bagikanTerjual(cariId('stok', so.dataset.sold), so); } });
         gambarDaftarStok();
     }
     function adaStok(s) { return s.status === 'tersedia' || s.status === 'dipesan'; }
@@ -2487,7 +2488,7 @@
     /* opsi.sewa = { harian: tarif 1 hari (0 = sesuai lama sewa), deposit } membuat poster penawaran SEWA dengan foto unit */
     function buatPoster(s, opsi) {
         if (opsi && opsi.artikel) return buatPosterArtikel(opsi.artikel);
-        var sewa = opsi && opsi.sewa;
+        var sewa = opsi && opsi.sewa, sold = opsi && opsi.terjual; /* sold = poster gitar yang sudah terjual: cap SOLD, tanpa harga dan tanpa data pembeli */
         var fp = (s.foto || []).filter(function (f) { return f.repo === 'publik'; })[0];
         var judul = L.judulStok(s);
         var fonts = Promise.all(['700 70px Playfair Display', '700 40px "DM Sans"'].map(function (f) { return document.fonts && document.fonts.load ? document.fonts.load(f) : null; }));
@@ -2510,6 +2511,16 @@
                 rect(c, x0, y0, w, h, 40); c.strokeStyle = 'rgba(210,178,122,.55)'; c.lineWidth = 3; c.stroke();
             }
             else if (r[1]) { var lw = 240, lh = lw * r[1].height / r[1].width; c.globalAlpha = .25; c.drawImage(r[1], fx + (fw - lw) / 2, fy + (fh - lh) / 2, lw, lh); c.globalAlpha = 1; }
+            /* cap SOLD: pelat gelap + bingkai ganda merah, miring, di tengah area foto */
+            if (sold) {
+                var sw = 600, sh = 210;
+                c.save(); c.translate(fx + fw / 2, fy + fh / 2); c.rotate(-0.2);
+                c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 30; rect(c, -sw / 2, -sh / 2, sw, sh, 26); c.fillStyle = 'rgba(13,10,7,.62)'; c.fill(); c.shadowBlur = 0;
+                c.strokeStyle = '#E5373F'; c.lineWidth = 12; rect(c, -sw / 2, -sh / 2, sw, sh, 26); c.stroke();
+                c.lineWidth = 4; rect(c, -sw / 2 + 24, -sh / 2 + 24, sw - 48, sh - 48, 14); c.stroke();
+                c.fillStyle = '#E5373F'; c.font = '800 150px ' + SANS; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('SOLD', 0, 8);
+                c.restore();
+            }
             /* lencana: kondisi (isi emas) + tingkat kondisi gitar bekas / kategori aksesoris (garis emas). Jenis gitar tidak diulang: sudah ada di judul */
             var kond = sewa ? 'RENT' : s.kondisi === 'bekas' ? 'PRE-OWNED' : 'NEW', cy = 1040; c.font = '800 28px ' + SANS;
             var bw = c.measureText(kond).width + 52; rect(c, 60, cy, bw, 56, 28); c.fillStyle = EMAS; c.fill(); c.fillStyle = '#262b1f'; c.fillText(kond, 86, cy + 38);
@@ -2519,7 +2530,10 @@
             var y = 1176; barisTeks(c, judul, 960, 2).forEach(function (b) { c.fillText(b, 60, y); y += 76; });
             if (String(s.warna || '').trim()) { c.fillStyle = '#c9bfb2'; c.font = '600 34px ' + SANS; c.fillText(s.warna, 60, y - 14); y += 40; }
             /* harga: "Rp" kecil + angka besar */
-            if (sewa) {
+            if (sold) {
+                c.fillStyle = EMAS; c.font = '700 66px ' + SERIF; c.fillText('Has a new owner', 60, y + 70); y += 100;
+                c.fillStyle = '#d8cfc3'; c.font = '600 32px ' + SANS; c.fillText('Thank you for your trust.', 60, y + 14); y += 70;
+            } else if (sewa) {
                 if (sewa.harian > 0) {
                     var ang = L.rupiah(sewa.harian).replace(/^Rp\s*/, '');
                     c.fillStyle = EMAS; c.font = '600 46px ' + SERIF; c.fillText('Rp', 60, y + 62); var rw0 = c.measureText('Rp').width + 12;
@@ -2534,7 +2548,7 @@
             c.font = '700 108px ' + SERIF; c.fillText(angka, 60 + rw, y + 76); y += 100;
             }
             /* deskripsi */
-            if (!sewa && String(s.deskripsi || '').trim()) { c.fillStyle = '#d8cfc3'; c.font = '500 32px ' + SANS; barisTeks(c, s.deskripsi, 960, Math.max(0, Math.min(2, Math.floor((1528 - y) / 44)))).forEach(function (b) { y += 44; c.fillText(b, 60, y + 6); }); }
+            if (!sewa && !sold && String(s.deskripsi || '').trim()) { c.fillStyle = '#d8cfc3'; c.font = '500 32px ' + SANS; barisTeks(c, s.deskripsi, 960, Math.max(0, Math.min(2, Math.floor((1528 - y) / 44)))).forEach(function (b) { y += 44; c.fillText(b, 60, y + 6); }); }
             /* penutup: logo besar di kiri; di kanannya nomor WhatsApp, ajakan ke situs, dan alamat (gambar tidak bisa diketuk, jadi semuanya teks biasa) */
             c.fillStyle = 'rgba(210,178,122,.35)'; c.fillRect(60, 1528, 960, 2);
             var tx = 60; if (r[1]) { var lh1 = 120, lw1 = lh1 * r[1].width / r[1].height; c.drawImage(r[1], 60, 1546, lw1, lh1); tx = 60 + lw1 + 32; }
@@ -2542,7 +2556,7 @@
             c.save(); c.translate(tx + 24 - 14, 1584 - 14); c.scale(28 / 24, 28 / 24); c.fillStyle = '#fff'; c.fill(new Path2D(WA_IKON.match(/ d="([^"]+)"/)[1])); c.restore();
             c.fillStyle = '#fff'; c.font = '800 42px ' + SANS; c.fillText(wa, tx + 64, 1598);
             var web = L.situs().replace(/^https?:\/\//, '').replace(/\/$/, '');
-            c.fillStyle = EMAS; c.font = '700 30px ' + SANS; c.fillText('See the full collection at ' + web, tx, 1642);
+            c.fillStyle = EMAS; c.font = '700 30px ' + SANS; c.fillText((sold ? 'Looking for a similar watch? See the collection at ' : 'See the full collection at ') + web, tx, 1642);
             c.fillStyle = '#b9ad9d'; c.font = '500 24px ' + SANS; c.fillText(barisTeks(c, C.toko.alamat, 1020 - tx, 1)[0], tx, 1672);
             return new Promise(function (ok, gagal) { cv.toBlob(function (b) { b ? ok(b) : gagal(new Error('Could not create the image.')); }, 'image/jpeg', .85); });
         });
@@ -2550,8 +2564,12 @@
     function blobBase64(b) { return new Promise(function (ok) { var f = new FileReader(); f.onload = function () { ok(String(f.result).split(',')[1] || ''); }; f.readAsDataURL(b); }); }
     /* Bagikan: poster + teks lewat menu bagikan HP (WA, Status WA, Instagram, Threads, X, dll). Di PC tanpa menu bagikan berkas: hanya teks, lewat menu bagikan atau WhatsApp. */
     function bagikanStok(s, tombol) { bagikanPoster(s, teksTawar(s), null, tombol); }
+    /* poster SOLD untuk Story: gitar yang sudah terjual (cap SOLD, tanpa harga & tanpa data pembeli) */
+    function bisaPosterSold(s) { return s.status === 'terjual' && s.kategori !== 'aksesoris' && (s.foto || []).some(function (f) { return f.repo === 'publik'; }); }
+    function teksTerjual(s) { return L.judulStok(s) + (s.warna ? ' (' + s.warna + ')' : '') + ' – SOLD\nThank you for your trust!\nLooking for a similar watch? See the collection: ' + L.situs() + 'collection.html\nAsk / order: https://wa.me/' + C.toko.wa; }
+    function bagikanTerjual(s, tombol) { bagikanPoster(s, teksTerjual(s), { terjual: true }, tombol); }
     function bagikanPoster(s, teks, opsi, tombol) {
-        var nama = 'jubeliwatch-' + (opsi && opsi.artikel ? 'journal-' + String(opsi.artikel.slug || 'artikel').slice(0, 60) : (opsi && opsi.sewa ? 'rental-' : '') + String(s.kode || 'barang').toLowerCase()) + '.jpg';
+        var nama = 'jubeliwatch-' + (opsi && opsi.artikel ? 'journal-' + String(opsi.artikel.slug || 'artikel').slice(0, 60) : (opsi && opsi.sewa ? 'rental-' : opsi && opsi.terjual ? 'sold-' : '') + String(s.kode || 'barang').toLowerCase()) + '.jpg';
         if (tombol) sibuk(tombol, true, 'Preparing…');
         function lepas() { if (tombol) sibuk(tombol, false); }
         /* PC / browser tanpa menu bagikan berkas: tanpa unduhan gambar, kirim teks penawaran lewat WhatsApp */
@@ -2600,6 +2618,7 @@
                     '<p class="ly-hint" style="margin:8px 0 0">Paid in full = sold right away. Part payment = deposit: the item is held for ' + C.jual.batasHari + ' days, and the receipt and balance reminders go by WhatsApp.</p>' : '') + '</fieldset>') +
             '<fieldset class="ly-card ly-f"><legend>Status</legend><div class="ly-status" id="sk-status"></div><label>Internal note<textarea data-s="catatan_admin" rows="2"></textarea></label></fieldset>' +
             (sk.baru ? '' : '<fieldset class="ly-card"><legend>More</legend>' + kisiAksi([].concat(s.harga_jual && adaStok(s) ? [aksi({ id: 'sk-tawar', ikon: 'bagikan', teks: 'Share poster &amp; offer', kelas: 'ly-akt--pri ly-akt--lebar' })] : [])
+                .concat(bisaPosterSold(s) ? [aksi({ id: 'sk-sold', ikon: 'bagikan', teks: 'SOLD poster (Story)', kelas: 'ly-akt--pri ly-akt--lebar' })] : [])
                 .concat(L.diKatalog(s) ? [aksi({ href: E(L.urlUnit(s.kode)), luar: true, ikon: 'lihat', teks: 'View item page' })] : [])
                 .concat(owner() ? [aksi({ id: 'sk-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })] : [])) + '</fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="sk-simpan">' + (sk.baru ? 'Save stock' : 'Save changes') + '</button></div></section>';
@@ -2632,6 +2651,7 @@
             else if (b.id === 'sk-sewa-baru') { if (dirty) return toast('Save the stock changes first.', true); pindah('#sewa/baru/' + s.id); }
             else if (b.id === 'sk-jual-baru') { if (dirty) return toast('Save the stock changes first.', true); pindah('#jual/baru/' + s.id); }
             else if (b.id === 'sk-tawar') { if (dirty) return toast('Save your changes first.', true); bagikanStok(s, b); }
+            else if (b.id === 'sk-sold') { if (dirty) return toast('Save your changes first.', true); bagikanTerjual(s, b); }
         });
         pilihFoto($('#sk-foto'), function (tahap, files) { antriFoto(sk.antri, files, {}, gambarFotoStok); });
         $('#sk-simpan').addEventListener('click', simpanStok);
