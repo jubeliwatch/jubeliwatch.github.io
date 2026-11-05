@@ -132,7 +132,7 @@
         hapus(rec).then(function () { cache[jenis] = cache[jenis].filter(function (x) { return x.id !== rec.id; }); setDirty(false); toast(pesan); location.hash = '#' + jenis; })
             .catch(function (e) { sibuk(btn, false); gagal(e); });
     }
-    var NAMA_METODE = { tunai: 'tunai', transfer: 'transfer', qris: 'QRIS' };
+    var NAMA_METODE = { tunai: 'tunai', transfer: 'transfer', qris: 'QRIS', tukar: 'exchange credit' };
     /* simpanan ditolak karena catatan sudah diubah di perangkat lain: tawarkan memuat data terbaru */
     function tawarMuatUlang(e) {
         if (confirm(e.message + '\n\nLoad the latest data now? Unsaved changes on this screen will be discarded.')) {
@@ -520,21 +520,28 @@
         var tanpaHarga = kr.items.filter(function (i) { return !(i.harga > 0); })[0];
         if (tanpaHarga) return toast('Enter a price for ' + tanpaHarga.nama + '.', true);
         var tot = totalKr(), hanyaStok = kr.items.every(function (i) { return i.jenis === 'stok'; }), m = $('#ks-modal');
-        var bayar = { metode: 'tunai', dp: false, diterima: tot, jumlahDp: '', batas: L.tambahHari(L.hariIni(), C.jual.batasHari) };
-        function pecahan() { var p = [tot]; [50000, 100000].forEach(function (k) { var x = Math.ceil(tot / k) * k; if (p.indexOf(x) < 0) p.push(x); }); return p.slice(0, 3); }
+        var kreditList = hanyaStok ? cache.jual.map(function (j) { var k = L.kreditTukar(j); return k && k.sisa > 0 ? { id: j.id, kode: j.kode, nama: j.nama, sisa: k.sisa } : null; }).filter(Boolean) : [];
+        var bayar = { metode: 'tunai', dp: false, diterima: tot, jumlahDp: '', batas: L.tambahHari(L.hariIni(), C.jual.batasHari), kredit: kreditList.length ? kreditList[0].id : '', pakaiKredit: false };
+        function kreditDipilih() { return bayar.pakaiKredit ? kreditList.filter(function (k) { return k.id === bayar.kredit; })[0] || null : null; }
+        /* yang masih harus dibayar uang (setelah kredit tukar, bila dipakai) */
+        function perlu() { var k = kreditDipilih(); return Math.max(0, tot - (k ? k.sisa : 0)); }
+        function pecahan() { var n = perlu(), p = [n]; [50000, 100000].forEach(function (k) { var x = Math.ceil(n / k) * k; if (p.indexOf(x) < 0) p.push(x); }); return p.slice(0, 3); }
         function gambar() {
-            var dp = bayar.dp, kembali = bayar.diterima - tot, uji = { items: [{ harga: tot, qty: 1 }], bayar: [{ jumlah: +bayar.jumlahDp || 0 }] }, hh = L.hitungJual(uji);
+            var dp = bayar.dp, kembali = bayar.diterima - perlu(), uji = { items: [{ harga: tot, qty: 1 }], bayar: [{ jumlah: +bayar.jumlahDp || 0 }] }, hh = L.hitungJual(uji);
             m.innerHTML = '<div class="ly-modal__in ks-m" role="dialog" aria-modal="true" aria-label="Payment">' +
                 '<div class="ks-m__head"><b>Payment</b><button type="button" class="ly-x" data-tutup aria-label="Close">×</button></div>' +
                 '<div class="ks-m__total"><small>Total to pay</small><b>' + L.rupiah(tot) + '</b></div>' +
+                (kreditList.length && !dp ? '<label class="ly-cek"><input type="checkbox" id="km-pakai-kredit"' + (bayar.pakaiKredit ? ' checked' : '') + '><span>Use <b>exchange credit</b> (the buyer exchanged a watch)</span></label>' +
+                    (bayar.pakaiKredit ? '<div class="ly-f"><label>Credit from<select id="km-kredit">' + kreditList.map(function (k) { return '<option value="' + E(k.id) + '"' + (k.id === bayar.kredit ? ' selected' : '') + '>' + E(k.kode + (k.nama ? ' · ' + k.nama : '') + ' · remaining ' + L.rupiah(k.sisa)) + '</option>'; }).join('') + '</select></label></div>' +
+                        '<div class="ly-sum"><div><span>Deducted from credit</span><span>' + L.rupiah(Math.min(tot, (kreditDipilih() || { sisa: 0 }).sisa)) + '</span></div><div class="ly-total"><span>Still to pay</span><span>' + L.rupiah(Math.max(0, tot - (kreditDipilih() || { sisa: 0 }).sisa)) + '</span></div></div>' : '') : '') +
                 (hanyaStok ? '<div class="ly-status ks-seg"><button type="button" data-dp="0" aria-pressed="' + !dp + '">Pay in full</button><button type="button" data-dp="1" aria-pressed="' + dp + '">Deposit (part payment)</button></div>' : '') +
                 '<div class="ly-status ks-seg"><button type="button" data-metode="tunai" aria-pressed="' + (bayar.metode === 'tunai') + '">Cash</button><button type="button" data-metode="transfer" aria-pressed="' + (bayar.metode === 'transfer') + '">Transfer</button></div>' +
                 (dp ? '<div class="ly-f"><label>Deposit amount (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="km-dp" value="' + E(bayar.jumlahDp) + '"></label>' +
                     '<label>Pay balance by<input type="date" id="km-batas" value="' + E(bayar.batas) + '"></label></div>' +
                     '<div class="ly-sum"><div><span>Balance after deposit</span><span>' + L.rupiah(Math.max(0, tot - (+bayar.jumlahDp || 0))) + '</span></div><div><span>If cancelled: fee ' + C.jual.potonganPersen + '% (no more than the deposit)</span><span>' + L.rupiah(hh.potongan) + '</span></div></div>' +
                     '<p class="ly-hint" style="margin:0">A deposit needs the buyer’s name and WhatsApp number. The item is held until paid in full; the deposit receipt is sent by WhatsApp next.</p>'
-                    : bayar.metode === 'tunai' ? '<div class="ly-f"><label>Cash received (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="km-terima" value="' + bayar.diterima + '"></label></div>' +
-                        '<div class="ks-pecahan">' + pecahan().map(function (x) { return '<button type="button" class="ly-btn ly-btn--sm" data-terima="' + x + '">' + (x === tot ? 'Exact amount' : L.rupiah(x)) + '</button>'; }).join('') + '</div>' +
+                    : bayar.metode === 'tunai' && perlu() > 0 ? '<div class="ly-f"><label>Cash received (Rp)<input type="number" inputmode="numeric" min="0" step="1000" id="km-terima" value="' + bayar.diterima + '"></label></div>' +
+                        '<div class="ks-pecahan">' + pecahan().map(function (x) { return '<button type="button" class="ly-btn ly-btn--sm" data-terima="' + x + '">' + (x === perlu() ? 'Exact amount' : L.rupiah(x)) + '</button>'; }).join('') + '</div>' +
                         '<div class="ly-sum"><div class="ly-total"><span>Change</span><span' + (kembali < 0 ? ' class="ly-telat"' : '') + '>' + (kembali < 0 ? 'short ' + L.rupiah(-kembali) : L.rupiah(kembali)) + '</span></div></div>' : '') +
                 '<div class="ly-btns ks-m__aksi"><button type="button" class="ly-btn" data-tutup>Cancel</button><button type="button" class="ly-btn ly-btn--pri" id="km-ok">' + (dp ? 'Save deposit' : 'Confirm payment') + '</button></div></div>';
         }
@@ -553,16 +560,21 @@
                     var j = +bayar.jumlahDp || 0; if (j >= tot) return toast('The deposit equals the total: choose Pay in full.', true);
                     if (!bayar.batas || bayar.batas < L.hariIni()) return toast('The pay-by date is not valid.', true);
                     if (!j && !confirm('No deposit yet. Hold the item for this customer anyway?')) return;
-                } else if (bayar.metode === 'tunai' && bayar.diterima < tot) return toast('Cash received is less than the total.', true);
+                } else if (bayar.pakaiKredit && !kreditDipilih()) return toast('Choose which exchange credit to use.', true);
+                else if (bayar.metode === 'tunai' && perlu() > 0 && bayar.diterima < perlu()) return toast('Cash received is less than the amount due.', true);
                 prosesBayar(bayar, b);
             }
         };
         m.oninput = function (e) {
-            if (e.target.id === 'km-terima') { bayar.diterima = Math.round(+e.target.value || 0); var k = bayar.diterima - tot, el = $('.ks-m .ly-total span:last-child'); el.textContent = k < 0 ? 'short ' + L.rupiah(-k) : L.rupiah(k); el.className = k < 0 ? 'ly-telat' : ''; }
+            if (e.target.id === 'km-terima') { bayar.diterima = Math.round(+e.target.value || 0); var k = bayar.diterima - perlu(), el = $('.ks-m .ly-total span:last-child'); el.textContent = k < 0 ? 'short ' + L.rupiah(-k) : L.rupiah(k); el.className = k < 0 ? 'ly-telat' : ''; }
             else if (e.target.id === 'km-dp') { bayar.jumlahDp = e.target.value; }
             else if (e.target.id === 'km-batas') bayar.batas = e.target.value;
         };
-        m.onchange = function (e) { if (e.target.id === 'km-dp') gambar(); };
+        m.onchange = function (e) {
+            if (e.target.id === 'km-dp') gambar();
+            else if (e.target.id === 'km-pakai-kredit') { bayar.pakaiKredit = e.target.checked; bayar.diterima = perlu(); gambar(); }
+            else if (e.target.id === 'km-kredit') { bayar.kredit = e.target.value; bayar.diterima = perlu(); gambar(); }
+        };
     }
     /* simpan: barang stok jadi satu transaksi jual, tiap servis dicatat pelunasannya. Yang sudah tersimpan dikeluarkan dari
        keranjang, supaya bila langkah berikutnya gagal, Bayar diulang tanpa mencatat dua kali */
@@ -575,13 +587,22 @@
         var p = Promise.resolve();
         if (stokIt.length) p = p.then(function () {
             var tStok = stokIt.reduce(function (t, i) { return t + i.harga * i.qty; }, 0), dibayar = bayar.dp ? +bayar.jumlahDp || 0 : tStok;
+            /* kredit tukar (pembeli menukar unit dalam 1x24 jam): dipotong dulu, sisanya dibayar uang */
+            var asalKredit = !bayar.dp && bayar.pakaiKredit ? cariId('jual', bayar.kredit) : null, kreditPakai = asalKredit ? Math.min(tStok, (L.kreditTukar(asalKredit) || { sisa: 0 }).sisa) : 0;
+            var bayarBaru = []; if (kreditPakai) bayarBaru.push({ id: idAcak(), tgl: tgl, jumlah: kreditPakai, jenis: 'pelunasan', metode: 'tukar' });
+            if (dibayar - kreditPakai > 0) bayarBaru.push({ id: idAcak(), tgl: tgl, jumlah: dibayar - kreditPakai, jenis: bayar.dp ? 'dp' : 'pelunasan', metode: bayar.metode });
+            struk.kredit = kreditPakai;
             var rec = { nama: nama, hp: hp, tgl: tgl, catatan: 'Checkout', items: stokIt.map(function (i) { return { stok_id: i.id, kode: i.kode, nama: i.nama, qty: i.qty, harga: i.harga }; }),
-                bayar: dibayar ? [{ id: idAcak(), tgl: tgl, jumlah: dibayar, jenis: bayar.dp ? 'dp' : 'pelunasan', metode: bayar.metode }] : [] };
+                bayar: bayarBaru };
             if (bayar.dp) rec.batas_lunas = bayar.batas; else rec.status = 'selesai';
             return A.simpanJual(rec).then(function (row) {
                 taruh('jual', row); cache.stok = A.daftar('stok'); struk.kode.push(row.kode); struk.jual = row;
                 if (L.hp4(row.hp).length === 4) struk.nota.push(L.urlNotaJual(row.kode));
                 kr.items = kr.items.filter(function (i) { return i.jenis !== 'stok'; });
+                if (!kreditPakai) return;
+                /* catat pemakaian kredit di transaksi yang ditukar (supaya sisanya benar) */
+                var asal = salin(asalKredit); asal.kredit = Object.assign({}, asal.kredit, { dipakai: ((asal.kredit || {}).dipakai || []).concat([{ kode: row.kode, jumlah: kreditPakai, tgl: tgl }]) });
+                return A.simpanJual(asal).then(function (r2) { taruh('jual', r2); }).catch(function (e) { toast('The sale was saved, but the credit use was not recorded on ' + asal.kode + ': open that sale and record it manually. ' + (e.message || ''), true); });
             });
         });
         svIt.forEach(function (it) {
@@ -606,7 +627,7 @@
     }
 
     /* ---------- struk: layar, printer thermal 58 mm / PDF, dan WhatsApp ---------- */
-    var METODE_STRUK = { tunai: 'Cash', transfer: 'Transfer', qris: 'QRIS' };
+    var METODE_STRUK = { tunai: 'Cash', transfer: 'Transfer', qris: 'QRIS', tukar: 'Exchange credit' };
     function jamStruk(d) { return L.tgl(L.tglStr(d)) + ' ' + ('0' + d.getHours()).slice(-2) + '.' + ('0' + d.getMinutes()).slice(-2); }
     function htmlStruk(s) {
         var t = C.toko, sisa = s.total - s.dibayar;
@@ -616,13 +637,13 @@
             '<div class="struk-g"></div><div class="struk-r t"><span>TOTAL</span><span>' + L.rupiah(s.total) + '</span></div>' +
             (s.dp ? '<div class="struk-r"><span>Deposit (' + METODE_STRUK[s.metode] + ')</span><span>' + L.rupiah(s.dibayar) + '</span></div><div class="struk-r t"><span>BALANCE</span><span>' + L.rupiah(sisa) + '</span></div>' +
                 (s.jual && s.jual.batas_lunas ? '<div class="struk-r"><span>Pay by</span><span>' + L.tgl(s.jual.batas_lunas) + '</span></div>' : '')
-                : '<div class="struk-r"><span>Paid (' + METODE_STRUK[s.metode] + ')</span><span>' + L.rupiah(s.diterima != null ? s.diterima : s.total) + '</span></div>' + (s.diterima != null ? '<div class="struk-r"><span>Change</span><span>' + L.rupiah(s.diterima - s.total) + '</span></div>' : '')) +
+                : (s.kredit ? '<div class="struk-r"><span>Exchange credit</span><span>-' + L.rupiah(s.kredit) + '</span></div>' : '') + (s.total - (s.kredit || 0) > 0 ? '<div class="struk-r"><span>Paid (' + METODE_STRUK[s.metode] + ')</span><span>' + L.rupiah(s.diterima != null ? s.diterima : s.total - (s.kredit || 0)) + '</span></div>' + (s.diterima != null ? '<div class="struk-r"><span>Change</span><span>' + L.rupiah(s.diterima - (s.total - (s.kredit || 0))) + '</span></div>' : '') : '')) +
             '<div class="struk-g"></div><div class="struk-c"><span>Thank you for shopping with us!</span>' + (s.nota.length ? '<span>Online receipt: jubeliwatch.github.io (code + last 4 phone digits)</span>' : '') + '<span>jubeliwatch.github.io</span></div></div>';
     }
     function teksStruk(s) {
-        var t = 'Hi ' + (s.nama || '') + ', thank you for shopping at ' + C.toko.nama + ' 🙏\n\nStruk ' + s.kode.join(', ') + ' · ' + jamStruk(s.waktu) + '\n';
+        var t = 'Halo' + (s.nama ? ' Kak ' + s.nama : '') + ', thank you for shopping at ' + C.toko.nama + ' 🙏\n\nStruk ' + s.kode.join(', ') + ' · ' + jamStruk(s.waktu) + '\n';
         t += s.items.map(function (i) { return '• ' + i.nama + (i.qty > 1 ? ' ×' + i.qty : '') + ' – ' + L.rupiah(i.harga * i.qty); }).join('\n');
-        t += '\n\nTotal: *' + L.rupiah(s.total) + '*\n' + (s.dp ? 'Deposit (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.dibayar) + '\nSisa: *' + L.rupiah(s.total - s.dibayar) + '*' + (s.jual ? ' (pay the balance by ' + L.tgl(s.jual.batas_lunas) + ')' : '') : 'Paid (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.total) + ' ✅');
+        t += '\n\nTotal: *' + L.rupiah(s.total) + '*\n' + (s.dp ? 'Deposit (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.dibayar) + '\nSisa: *' + L.rupiah(s.total - s.dibayar) + '*' + (s.jual ? ' (pay the balance by ' + L.tgl(s.jual.batas_lunas) + ')' : '') : (s.kredit ? 'Exchange credit: ' + L.rupiah(s.kredit) + '\n' : '') + (s.total - (s.kredit || 0) > 0 ? 'Paid (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.total - (s.kredit || 0)) + ' ✅' : 'Paid ✅'));
         if (s.nota.length) t += '\n\nOnline receipt:\n' + s.nota.join('\n') + '\n(enter the last 4 digits of your phone number)';
         if (s.dp) t += '\n\nDeposit terms (pay-by date, cancellation fee ' + C.jual.potonganPersen + '%) are on the receipt. Please reply *AGREE* if everything is correct.';
         return t;
@@ -633,6 +654,19 @@
         var lepas = function () { document.body.classList.remove('cetak-struk'); window.removeEventListener('afterprint', lepas); };
         window.addEventListener('afterprint', lepas); window.print();
         if (!window.AyriApp) setTimeout(lepas, 1500); /* di aplikasi Android: dilepas saat cetak selesai (event afterprint) */
+    }
+    /* struk dari transaksi jual yang sudah tersimpan (cetak ulang / bagikan nota dari tab Jual, termasuk pembeli tanpa nomor WhatsApp) */
+    function strukDariJual(j) {
+        var h = L.hitungJual(j), bayar = (j.bayar || []).filter(function (b) { return b.jenis !== 'refund' && b.metode !== 'tukar'; }), metode = (bayar.slice(-1)[0] || {}).metode || 'tunai';
+        var kredit = (j.bayar || []).filter(function (b) { return b.metode === 'tukar'; }).reduce(function (t, b) { return t + (+b.jumlah || 0); }, 0);
+        return { waktu: new Date(j.created_at || j.tgl), nama: j.nama || '', hp: j.hp || '', items: (j.items || []).map(function (i) { return { nama: i.nama, kode: i.kode, qty: i.qty, harga: i.harga }; }),
+            total: h.total, metode: metode, dp: j.status === 'dp', dibayar: h.dibayar, kredit: kredit, diterima: null, kode: [j.kode], nota: L.hp4(j.hp).length === 4 ? [L.urlNotaJual(j.kode)] : [], jual: j };
+    }
+    /* menu bagikan HP yang universal untuk teks (WhatsApp, Instagram, Telegram, SMS, dll): aplikasi 1.4.1+, menu bagikan browser, atau WhatsApp tanpa nomor */
+    function bagikanTeks(teks) {
+        if (bisaBagikanTeksApp()) kirimKeAplikasi('bagikanTeks', { teks: teks });
+        else if (navigator.share) navigator.share({ text: teks }).catch(function (e) { if (!e || e.name !== 'AbortError') bukaWa('', teks); });
+        else bukaWa('', teks);
     }
     function tampilStruk(s) {
         var m = $('#ks-modal'); if (!m) return;
@@ -840,6 +874,8 @@
         cache.servis.forEach(function (s) { if (['menunggu_dp', 'antri', 'dikerjakan'].indexOf(s.status) > -1 && s.estimasi && s.estimasi < h) t.push({ g: 'Service past its estimate', u: 1, h: '#servis/' + s.id, t: L.namaGitar(s, 'Watch') + ' · ' + s.nama, m: L.STATUS[s.status].label + ' · estimate ' + L.tgl(s.estimasi), merah: true }); });
         /* gitar selesai belum diambil */
         cache.servis.forEach(function (s) { if (L.perluIngat(s, h)) { var tt = L.titip(s, h); t.push({ g: 'Watch not collected yet', u: 2, h: '#servis/' + s.id, t: L.namaGitar(s, 'Watch') + ' · ' + s.nama, m: 'Done ' + tt.lama + ' days ago' + (tt.hariBiaya ? ' · storage ' + L.rupiah(tt.biaya) : '') + ' · send a WhatsApp reminder' }); } });
+        /* kredit tukar belum dipakai (pembeli menukar unit): merah bila sudah lewat 1x24 jam */
+        cache.jual.forEach(function (j) { var k = L.kreditTukar(j); if (k && k.sisa > 0) { var lama = L.hariAntara(k.tgl || j.tgl_batal || j.tgl, h); t.push({ g: 'Exchange credit', u: lama > 1 ? 0 : 2, h: '#jual/' + j.id, t: (j.nama || 'Buyer') + ' · remaining ' + L.rupiah(k.sisa), m: L.namaJual(j) + ' · exchanged ' + L.tgl(k.tgl) + (lama > 1 ? ' (over 24 hours)' : ''), merah: lama > 1 }); } });
         /* tindak lanjut pelanggan: terima kasih + minta ulasan, garansi servis hampir habis */
         cache.servis.forEach(function (s) { L.tindakServis(s, h).forEach(function (jn) {
             var g = L.garansiServis(s);
@@ -1116,7 +1152,7 @@
     function arusKas() {
         var log = [];
         cache.servis.forEach(function (s) { (s.bayar || []).forEach(function (b) { log.push({ tgl: b.tgl, jumlah: +b.jumlah || 0, metode: b.metode, sumber: 'servis', kode: s.kode, nama: s.nama, ket: ({ dp: 'Service deposit', tambahan: 'Service payment', pelunasan: 'Service final payment' })[b.jenis] || 'Service payment' }); }); });
-        cache.jual.forEach(function (j) { (j.bayar || []).forEach(function (b) { var r = b.jenis === 'refund'; log.push({ tgl: b.tgl, jumlah: (r ? -1 : 1) * (+b.jumlah || 0), metode: b.metode, sumber: 'barang', kode: j.kode, nama: j.nama || 'Walk-in customer', ket: r ? 'Refund (cancelled)' : ({ dp: 'Item deposit', tambahan: 'Item payment', pelunasan: j.status === 'dp' ? 'Item payment' : 'Item sale' })[b.jenis] || 'Item sale' }); }); });
+        cache.jual.forEach(function (j) { (j.bayar || []).forEach(function (b) { if (b.metode === 'tukar') return; /* kredit tukar: uangnya sudah tercatat di transaksi yang ditukar */ var r = b.jenis === 'refund'; log.push({ tgl: b.tgl, jumlah: (r ? -1 : 1) * (+b.jumlah || 0), metode: b.metode, sumber: 'barang', kode: j.kode, nama: j.nama || 'Walk-in customer', ket: r ? 'Refund (cancelled)' : ({ dp: 'Item deposit', tambahan: 'Item payment', pelunasan: j.status === 'dp' ? 'Item payment' : 'Item sale' })[b.jenis] || 'Item sale' }); }); });
         cache.sewa.forEach(function (w) {
             var depMetode = (w.bayar || []).filter(function (b) { return b.jenis === 'deposit'; }).map(function (b) { return b.metode; })[0] || 'tunai';
             (w.bayar || []).forEach(function (b) {
@@ -1909,7 +1945,7 @@
     /* ================= jual stok: lunas, atau DP lalu pelunasan ================= */
     var jl = null, filterJl = 'aktif', cariJl = '';
     var CHIP_JUAL = { dp: 'st-menunggu_dp', lunas: 'st-selesai', selesai: 'st-diambil', batal: 'st-batal' };
-    function chipJual(j) { return '<span class="st-chip ' + CHIP_JUAL[j.status] + '">' + E(L.STATUS_JUAL[j.status] || j.status) + '</span>'; }
+    function chipJual(j) { return '<span class="st-chip ' + CHIP_JUAL[j.status] + '">' + E(j.status === 'batal' && j.batal_oleh === 'tukar' ? 'Ditukar' : L.STATUS_JUAL[j.status] || j.status) + '</span>'; }
     function daftarJual() {
         app.innerHTML = '<section><div class="ly-head"><h1>Sales</h1><a class="ly-btn ly-btn--pri" href="#stok">+ Sell from stock</a></div>' +
             '<p class="ly-muted">Pick an item in <a href="#stok">Stock</a> and tap “Sell / reserve with deposit”. Items with a deposit are held (stock goes down and they leave the catalogue) until paid in full or cancelled.</p>' +
@@ -1997,7 +2033,7 @@
     }
     function bukaJual(id) { ambilCatatan('jual', id, function () { return null; }, function (j) { j.bayar = j.bayar || []; jl = { baru: false, j: j }; gambarJual2(); }); }
     function gambarJual2() {
-        var j = jl.j, h = L.hitungJual(j), i = L.infoJual(j), aktif = j.status === 'dp' || j.status === 'lunas', adaHp = L.hp4(j.hp).length === 4;
+        var j = jl.j, h = L.hitungJual(j), i = L.infoJual(j), aktif = j.status === 'dp' || j.status === 'lunas', adaHp = L.hp4(j.hp).length === 4, kt = L.kreditTukar(j);
         app.innerHTML = '<section id="jl" class="ly-f"><div class="ly-head"><a class="ly-back" href="#jual">‹ Sales</a></div>' +
             '<div class="ly-head"><h1>' + E(j.nama || 'Walk-in customer') + '</h1>' + chipJual(j) + '</div>' + kodeBaris(j, adaHp ? null : '') +
             '<fieldset class="ly-card"><legend>Items</legend><div class="ly-bayar">' + j.items.map(function (it) {
@@ -2005,7 +2041,7 @@
             }).join('') + '</div>' + (j.catatan ? '<p class="ly-hint" style="margin:8px 0 0">' + E(j.catatan) + '</p>' : '') + '</fieldset>' +
             '<fieldset class="ly-card"><legend>Payments</legend><div class="ly-sum">' +
             '<div><span>Total</span><span>' + L.rupiah(h.total) + '</span></div><div><span>Paid so far</span><span>' + L.rupiah(h.dibayar) + '</span></div>' +
-            (j.status === 'batal' ? '<div><span>Cancellation fee' + (j.batal_oleh === 'toko' ? ' (cancelled by shop)' : '') + '</span><span>' + L.rupiah(h.potongan) + '</span></div><div class="ly-total"><span>Refunded</span><span>' + L.rupiah(h.kembali) + '</span></div>'
+            (j.status === 'batal' && j.batal_oleh === 'tukar' ? '<div class="ly-total"><span>Exchanged: the money becomes exchange credit (not refunded)</span><span>' + L.rupiah(h.dibayar) + '</span></div>' : j.status === 'batal' ? '<div><span>Cancellation fee' + (j.batal_oleh === 'toko' ? ' (cancelled by shop)' : '') + '</span><span>' + L.rupiah(h.potongan) + '</span></div><div class="ly-total"><span>Refunded</span><span>' + L.rupiah(h.kembali) + '</span></div>'
                 : '<div class="ly-total"><span>Balance</span><span>' + L.rupiah(h.sisa) + '</span></div>') +
             (j.status === 'dp' ? '<div><span>Pay balance by</span><span' + (i.lewat ? ' class="ly-telat"' : '') + '>' + L.tgl(j.batas_lunas) + (i.lewat ? ' (overdue ' + -i.sisa + ' days)' : ' (' + i.sisa + ' days left)') + '</span></div>' : '') + '</div>' +
             '<div class="ly-bayar" id="jl-bayar" style="margin-top:10px"></div>' +
@@ -2013,17 +2049,26 @@
                 '<label>Metode<select id="by-metode">' + opsi([['tunai', 'Cash'], ['transfer', 'Transfer'], ['qris', 'QRIS']], 'transfer') + '</select></label></div>' +
                 '<div class="ly-row2"><label>Date<input type="date" id="by-tgl"></label><label>Pay balance by<input type="date" id="jl-batas"></label></div>' +
                 '<button type="button" class="ly-btn" id="by-tambah">Record payment</button></div>' : '') + '</fieldset>' +
+            (j.status !== 'batal' ? '<fieldset class="ly-card"><legend>Receipt &amp; invoice</legend>' + kisiAksi([aksi({ id: 'jl-cetak', ikon: 'cetak', teks: 'Reprint 58 mm receipt' }), aksi({ id: 'jl-pdf', ikon: 'nota', teks: 'Save PDF' }),
+                aksi({ id: 'jl-bagikan', ikon: 'kirim', teks: 'Share receipt (WhatsApp, etc.)', kelas: 'ly-akt--pri ly-akt--lebar' })]) +
+                '<p class="ly-hint" style="margin:8px 0 0">Works any time, also for buyers without a WhatsApp number. The receipt text is sent through the phone’s share menu.</p></fieldset>' : '') +
             '<fieldset class="ly-card"><legend>WhatsApp to the buyer</legend>' + (adaHp && j.status !== 'batal' ? '<label class="ly-cek" style="margin-bottom:12px"><input type="checkbox" id="jl-setuju"><span>The buyer replied <b>AGREE</b> to the terms on WhatsApp</span></label>' : '') + (adaHp ?
                 barisWa([].concat(j.status === 'dp' ? [['dp', 'Send deposit receipt', 'Order proof + ask for AGREE'], ['pengingat', 'Balance reminder', 'Remind them of the balance and due date']] : [])
                     .concat(j.status === 'lunas' || j.status === 'selesai' ? [['lunas', 'Send paid receipt', 'Online receipt link']] : [])
-                    .concat(j.status === 'batal' ? [['batal', 'Send cancellation notice', 'Refund breakdown']] : []), 'wa') +
+                    .concat(j.status === 'batal' && j.batal_oleh !== 'tukar' ? [['batal', 'Send cancellation notice', 'Refund breakdown']] : []), 'wa') +
                 kisiAksi([aksi({ href: E(L.urlNotaJual(j.kode)), luar: true, ikon: 'nota', teks: 'Open receipt' })])
-                : '<p class="ly-muted" style="margin:0">Without a WhatsApp number (sale paid in full), no online receipt is created.</p>') +
+                : '<p class="ly-muted" style="margin:0">Without a WhatsApp number (sale paid in full), no online receipt is created. Use <b>Receipt &amp; invoice</b> above to reprint or share the receipt.</p>') +
             ((j.pengingat || []).length ? '<p class="ly-hint" style="margin:8px 0 0">Reminded: ' + j.pengingat.map(L.tgl).join(', ') + '</p>' : '') + '</fieldset>' +
-            (aktif ? '<fieldset class="ly-card"><legend>Status</legend><div class="ly-btns">' +
+            (aktif || j.status === 'selesai' ? '<fieldset class="ly-card"><legend>Status</legend><div class="ly-btns">' +
                 (j.status === 'lunas' ? '<button type="button" class="ly-btn ly-btn--pri" id="jl-selesai">Item collected / shipped</button>' : '') +
-                '<button type="button" class="ly-btn" id="jl-batal-p">Cancel (buyer)</button><button type="button" class="ly-btn" id="jl-batal-t">Cancel (shop)</button></div>' +
-                '<p class="ly-hint" style="margin:8px 0 0">Cancelled by the buyer / past the due date: a fee of ' + C.jual.potonganPersen + '% of the item price (no more than what was paid). Cancelled by the shop: full refund. The item goes back into stock.</p></fieldset>' : '') +
+                (j.status === 'dp' ? '<button type="button" class="ly-btn" id="jl-batal-p">Cancel (buyer)</button><button type="button" class="ly-btn" id="jl-batal-t">Cancel (shop)</button>'
+                    : '<button type="button" class="ly-btn ly-btn--pri" id="jl-tukar">Exchange watch (within 24 h)</button><button type="button" class="ly-btn" id="jl-batal-t">Cancelled by shop</button>') + '</div>' +
+                (j.status === 'dp' ? '<p class="ly-hint" style="margin:8px 0 0">Deposit/instalment order cancelled by the buyer (or past the due date): a fee of ' + C.jual.potonganPersen + '% of the item price (no more than what was paid). Cancelled by the shop: full refund. The item goes back into stock.</p>'
+                    : '<p class="ly-hint" style="margin:8px 0 0"><b>Paid in full: the money is not refunded.</b> If the buyer exchanges it for another watch (within 24 hours), use <b>Exchange watch</b>: the item returns to stock and the money becomes <b>exchange credit</b> toward another watch at Checkout. Use <b>Cancelled by shop</b> only when the shop is at fault (full refund). Do not use Delete.</p>') + '</fieldset>' : '') +
+            (kt ? '<fieldset class="ly-card"><legend>Exchange credit</legend><div class="ly-sum"><div><span>Money already paid (not refunded)</span><span>' + L.rupiah(kt.jumlah) + '</span></div>' +
+                ((j.kredit.dipakai || []).map(function (p) { return '<div><span>&nbsp; used ' + L.tgl(p.tgl) + ' · ' + E(p.kode) + '</span><span>−' + L.rupiah(p.jumlah) + '</span></div>'; }).join('')) +
+                '<div class="ly-total"><span>' + (kt.sisa ? 'Credit left' : 'Credit fully used') + '</span><span>' + L.rupiah(kt.sisa) + '</span></div></div>' +
+                (kt.sisa ? '<a class="ly-btn ly-btn--pri" href="#kasir" style="margin-top:10px">Open Checkout to use the credit</a>' : '') + '</fieldset>' : '') +
             (owner() ? '<fieldset class="ly-card"><legend>More</legend>' + kisiAksi([aksi({ id: 'jl-hapus', ikon: 'hapus', teks: 'Delete sale', kelas: 'ly-akt--del' })]) +
             '<p class="ly-hint ly-hint--c">Delete only for data-entry mistakes; stock is returned. For cancelled orders, use the Cancel buttons so it is recorded.</p></fieldset>' : '') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="jl-simpan">Save changes</button></div></section>';
@@ -2038,6 +2083,8 @@
         el.addEventListener('click', function (e) {
             var b = e.target.closest('button'); if (!b) return; var d = b.dataset;
             if (d.wa) kirimWaJual(d.wa, b);
+            else if (b.id === 'jl-cetak' || b.id === 'jl-pdf') { var sj = strukDariJual(j); if (b.id === 'jl-cetak' && bisaCetakBt()) { kirimKeAplikasi('cetakStruk', { baris: L.strukThermal(sj) }); toast('Printing…'); } else cetakStruk(sj); }
+            else if (b.id === 'jl-bagikan') bagikanTeks(teksStruk(strukDariJual(j)));
             else if (d.delbayar != null) { var by = j.bayar[+d.delbayar]; if (confirm('Delete payment ' + L.rupiah(by.jumlah) + ' dated ' + L.tgl(by.tgl) + '?')) { j.bayar.splice(+d.delbayar, 1); gambarBayarJual(); setDirty(true); } }
             else if (b.id === 'by-tambah') {
                 var jml = Math.round(+$('#by-jml').value || 0); if (jml <= 0) return toast('Enter the payment amount.', true);
@@ -2046,6 +2093,7 @@
                 gambarBayarJual(); setDirty(true); toast(lunas ? 'Paid in full! Tap Save, then send the paid receipt.' : 'Payment recorded. Tap Save.');
             }
             else if (b.id === 'jl-selesai') { if (L.hitungJual(j).sisa > 0 && !confirm('There is still a balance. Mark as done anyway?')) return; j.status = 'selesai'; simpanJualIni(); }
+            else if (b.id === 'jl-tukar') tukarUnit();
             else if (b.id === 'jl-batal-p' || b.id === 'jl-batal-t') batalJual(b.id === 'jl-batal-t' ? 'toko' : 'pembeli');
             else if (b.id === 'jl-simpan') simpanJualIni();
             else if (b.id === 'jl-hapus') { if (konfirmasiKode((j.status === 'selesai' ? 'This item was ALREADY handed to the buyer. Delete only if this sale was entered by mistake: stock will go back up. ' : 'Delete this sale? Stock will be returned. ') + 'The online receipt is deleted too.', j.kode)) hapusData('jual', j, b, function (r) { return A.hapusJual(r).then(function () { cache.stok = A.daftar('stok'); }); }, 'Sale deleted.'); }
@@ -2058,6 +2106,14 @@
             return '<div><span>' + NAMA[b.jenis] + ' · ' + L.tgl(b.tgl) + ' · ' + (METODE[b.metode] || b.metode) + (b.baru ? ' <small class="ly-muted">(not saved)</small>' : '') + '</span><b>' + (b.jenis === 'refund' ? '−' : '') + L.rupiah(b.jumlah) + '</b>' +
                 (j.status === 'dp' || b.baru ? '<button type="button" class="ly-x" data-delbayar="' + n + '" aria-label="Delete payment">×</button>' : '') + '</div>';
         }).join('') : '<p class="ly-muted">No payments yet.</p>';
+    }
+    /* tukar unit (kebijakan 1x24 jam, sudah bayar penuh): barang kembali ke stok, uang TIDAK dikembalikan tetapi jadi kredit tukar untuk unit lain */
+    function tukarUnit() {
+        var j = jl.j, h = L.hitungJual(j), tglBeli = j.tgl_selesai || j.tgl_lunas || j.tgl, lama = L.hariAntara(tglBeli, L.hariIni());
+        if (lama > 1 && !confirm('This purchase was on ' + L.tgl(tglBeli) + ', more than 24 hours ago. Process the exchange anyway?')) return;
+        if (!confirm('Exchange ' + j.kode + '?\n\n• The item returns to stock (available again).\n• The money ' + L.rupiah(h.dibayar) + ' is NOT refunded: it becomes exchange credit toward another watch at Checkout.\n• This sale is marked Exchanged.')) return;
+        j.status = 'batal'; j.batal_oleh = 'tukar'; j.kredit = { jumlah: h.dibayar, tgl: L.hariIni(), dipakai: [] };
+        simpanJualIni(function () { toast('The item is back in stock. Exchange credit ' + L.rupiah(h.dibayar) + ' can be used at Checkout.'); });
     }
     function batalJual(oleh) {
         var j = jl.j, uji = Object.assign({}, j, { batal_oleh: oleh }), h = L.hitungJual(uji);
@@ -2673,7 +2729,7 @@
                 (L.titipanTerkunci(s) ? '<p class="ly-ingat ly-ingat--info"><span><b>Consigned watch.</b> Selling through Checkout is not available yet (coming soon).' + (owner() ? ' <a href="#titip/' + E(s.sumber_titip) + '">Open consignment record</a>' : '') + '</span></p>' : '') +
                 (+s.jumlah > 0 && s.status !== 'ditarik' && !L.sewaAktifStok(s.id, cache.sewa) && !L.titipanTerkunci(s) ? '<div class="ly-btns" style="margin-top:10px"><button type="button" class="ly-btn ly-btn--pri" id="sk-jual-baru">Sell / reserve with deposit</button></div>' +
                     '<p class="ly-hint" style="margin:8px 0 0">Paid in full = sold right away. Part payment = deposit: the item is held for ' + C.jual.batasHari + ' days, and the receipt and balance reminders go by WhatsApp.</p>' : '') + '</fieldset>') +
-            '<fieldset class="ly-card ly-f"><legend>Status</legend><div class="ly-status" id="sk-status"></div><label>Internal note<textarea data-s="catatan_admin" rows="2"></textarea></label></fieldset>' +
+            '<fieldset class="ly-card ly-f"><legend>Status</legend><div class="ly-status" id="sk-status"></div><p class="ly-hint" id="sk-status-info" hidden></p><label>Internal note<textarea data-s="catatan_admin" rows="2"></textarea></label></fieldset>' +
             (sk.baru ? '' : '<fieldset class="ly-card"><legend>More</legend>' + kisiAksi([].concat(s.harga_jual && adaStok(s) ? [aksi({ id: 'sk-tawar', ikon: 'kirim', teks: 'Share poster &amp; offer', kelas: 'ly-akt--pri ly-akt--lebar' })] : [])
                 .concat(bisaPosterSold(s) ? [aksi({ id: 'sk-sold', ikon: 'kirim', teks: 'SOLD poster (Story)', kelas: 'ly-akt--pri ly-akt--lebar' })] : [])
                 .concat(L.diKatalog(s) ? [aksi({ href: E(L.urlUnit(s.kode)), luar: true, ikon: 'lihat', teks: 'View item page' })] : [])
@@ -2720,8 +2776,11 @@
             '<div><span>Estimated profit on remaining stock</span><span>' + L.rupiah(u.potensi) + '</span></div>' +
             (u.unitTerjual ? '<div class="ly-total"><span>Sold so far ' + u.unitTerjual + ' unit(s)</span><span>profit ' + L.rupiah(u.untung) + '</span></div>' : '');
     }
+    /* transaksi jual yang masih berlaku (belum batal) untuk barang ini */
+    function jualAktifStok(s) { return cache.jual.filter(function (j) { return j.status !== 'batal' && (j.items || []).some(function (i) { return i.stok_id === s.id; }); }); }
     function gambarStatusStok() {
-        var s = sk.s;
+        var s = sk.s, info = $('#sk-status-info'), aktifJ = s.status === 'terjual' ? jualAktifStok(s) : [];
+        if (info) { info.hidden = !aktifJ.length; info.innerHTML = aktifJ.length ? 'Sold via ' + aktifJ.map(function (j) { return '<a href="#jual/' + E(j.id) + '">' + E(j.kode) + '</a>'; }).join(', ') + '. <b>Buyer cancelled or the item came back?</b> Open that sale and tap Cancel: the stock becomes available again and the refund is recorded. Changing the status here alone does not cancel the sale.' : ''; }
         $('#sk-status').innerHTML = ['tersedia', 'dipesan', 'ditarik'].map(function (k) { return '<button type="button" data-sts="' + k + '" aria-pressed="' + (s.status === k) + '">' + L.STATUS_STOK[k] + '</button>'; }).join('') +
             (s.status === 'terjual' ? '<button type="button" aria-pressed="true" disabled>Sold</button>' : '');
     }
@@ -2739,7 +2798,13 @@
         L.isiFoto(el, sk.s, A.fotoAdmin);
     }
     function simpanStok() {
-        var s = sk.s;
+        var s = sk.s, asli = !sk.baru && cariId('stok', s.id), aktifJ = asli ? jualAktifStok(s) : [];
+        /* barang yang terjual lewat transaksi tidak dikembalikan dengan mengubah status/jumlah di sini: transaksinya yang harus dibatalkan */
+        if (asli && asli.status === 'terjual' && aktifJ.length && (s.status === 'tersedia' || s.status === 'dipesan' || +s.jumlah > +asli.jumlah)) {
+            if (confirm('This item is still recorded as sold in ' + aktifJ.map(function (j) { return j.kode; }).join(', ') + '. Changing the status or quantity here does not cancel the sale or its money.\n\nOpen the sale now to cancel it?')) pindah('#jual/' + aktifJ[0].id);
+            return;
+        }
+        if (s.status === 'tersedia' && !(+s.jumlah > 0)) return toast('The available quantity is still 0, so the item stays Sold. Enter 1 if the item really is available again.', true);
         if (s.kategori === 'aksesoris' ? !String(s.nama || '').trim() : !String(s.arloji_merk || '').trim()) return toast(s.kategori === 'aksesoris' ? 'Enter the product name.' : 'Enter the watch brand / model.', true);
         if (s.tampil !== false && adaStok(s) && s.harga_jual > 0 && !s.foto.length && !sk.antri.length && !confirm('This item will appear in the website collection without a photo. Continue?')) return;
         if (sk.antri.some(function (q) { return !q.hasil; })) return toast('Photos are still processing. Please wait a moment.', true);
