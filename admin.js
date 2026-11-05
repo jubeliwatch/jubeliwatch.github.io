@@ -440,7 +440,7 @@
     function nKr() { return kr.items.reduce(function (t, i) { return t + i.qty; }, 0); }
     function kasir() {
         app.innerHTML = '<section class="ks">' +
-            '<div class="ks-kiri"><div class="ly-card ks-atas"><label class="ks-cari">' + SVG.cari + '<input id="ks-cari" type="search" placeholder="Search item, brand, dial, serial no., service code…" autocomplete="off"></label>' +
+            '<div class="ks-kiri"><div class="ly-card ks-atas"><div class="ks-cari-baris"><label class="ks-cari">' + SVG.cari + '<input id="ks-cari" type="search" placeholder="Search item, brand, dial, serial no., service code…" autocomplete="off"></label><button type="button" class="ly-btn ks-jasa" data-jasa aria-haspopup="dialog">+ Jasa cepat</button></div>' +
             '<div class="ly-filter" id="ks-filter"></div></div><div class="ks-grid" id="ks-grid"></div></div>' +
             '<aside class="ks-kanan" id="ks-kanan"><div class="ly-card ks-inv">' +
             '<div class="ks-inv__head"><span class="ks-bulat">' + SVG.troli + '</span><div><b>Checkout invoice</b><small>' + L.tgl(L.hariIni()) + '</small></div><button type="button" class="ly-x ks-tutup" id="ks-tutup" aria-label="Close">×</button></div>' +
@@ -451,6 +451,7 @@
             '<div class="ly-modal" id="ks-modal" hidden></div>';
         $('#ks-cari').value = cariKs; $('#ks-nama').value = kr.nama || ''; $('#ks-hp').value = kr.hp || '';
         $('#ks-cari').addEventListener('input', function () { cariKs = this.value; gambarProduk(); });
+        $('.ks-atas').addEventListener('click', function (e) { if (e.target.closest('[data-jasa]')) bukaJasaCepat(); });
         $('#ks-filter').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filterKs = b.dataset.f; gambarProduk(); } });
         $('#ks-grid').addEventListener('click', function (e) { var b = e.target.closest('[data-tambah]'); if (b) tambahKr(b.dataset.tambah); });
         $('#ks-nama').addEventListener('input', function () { kr.nama = this.value; });
@@ -529,8 +530,8 @@
         if (!$('#ks-isi')) return;
         var tot = totalKr(), n = nKr();
         $('#ks-isi').innerHTML = kr.items.length ? kr.items.map(function (it, i) {
-            return '<div class="ks-it"><div class="ks-it__a"><b>' + E(it.nama) + '</b><small>' + E(it.kode) + '</small></div><button type="button" class="ly-x" data-hapus data-i="' + i + '" aria-label="Remove from cart">×</button>' +
-                '<div class="ks-it__b">' + (it.jenis === 'stok' ? '<span class="ks-qty"><button type="button" data-q="-1" data-i="' + i + '" aria-label="' + (it.qty > 1 ? 'Decrease' : 'Remove from cart') + '">' + (it.qty > 1 ? '−' : '🗑') + '</button><b>' + it.qty + '</b><button type="button" data-q="1" data-i="' + i + '" aria-label="Add"' + (it.qty >= it.maks ? ' disabled' : '') + '>+</button></span>' +
+            return '<div class="ks-it"><div class="ks-it__a"><b>' + E(it.nama) + '</b><small>' + E(it.jenis === 'jasa' ? 'Quick service' : it.kode) + '</small></div><button type="button" class="ly-x" data-hapus data-i="' + i + '" aria-label="Remove from cart">×</button>' +
+                '<div class="ks-it__b">' + (it.jenis !== 'servis' ? '<span class="ks-qty"><button type="button" data-q="-1" data-i="' + i + '" aria-label="' + (it.qty > 1 ? 'Decrease' : 'Remove from cart') + '">' + (it.qty > 1 ? '−' : '🗑') + '</button><b>' + it.qty + '</b><button type="button" data-q="1" data-i="' + i + '" aria-label="Add"' + (it.qty >= it.maks ? ' disabled' : '') + '>+</button></span>' +
                     '<label class="ks-harga">@<input type="number" inputmode="numeric" min="0" step="1000" data-harga data-i="' + i + '" value="' + it.harga + '" aria-label="Unit price"></label>'
                     : '<label class="ks-ambil"><input type="checkbox" data-ambil data-i="' + i + '"' + (it.ambil ? ' checked' : '') + '> Watch collected now</label>') +
                 '<b class="ks-it__sub">' + L.rupiah(it.harga * it.qty) + '</b></div></div>';
@@ -540,12 +541,49 @@
         var bar = $('#ks-bar'); bar.hidden = !kr.items.length; bar.innerHTML = '<span class="ks-bulat">' + SVG.troli + '<i>' + n + '</i></span><span>' + L.rupiah(tot) + '</span><b>Review &amp; pay ›</b>';
     }
 
+    /* ---------- jasa cepat ----------
+       Pekerjaan yang selesai sambil pelanggan menunggu (pasang senar, setel ringan, ganti baterai, dll.): tidak lewat menu Servis.
+       Nama bebas diketik (saran dari daftar jasa + jasa yang pernah dicatat), tanpa garansi. Masuk keranjang dan satu nota dengan barang. */
+    function saranJasa() {
+        var peta = {}, daftar = [];
+        cache.jual.slice().sort(function (a, b) { return String(b.tgl).localeCompare(String(a.tgl)); }).forEach(function (j) { (j.items || []).forEach(function (i) { if (i.jenis === 'jasa' && !peta[i.nama.toLowerCase()]) { peta[i.nama.toLowerCase()] = 1; daftar.push({ nama: i.nama, harga: i.harga }); } }); });
+        (C.katalogJasa || []).forEach(function (k) { if (!peta[k.nama.toLowerCase()]) { peta[k.nama.toLowerCase()] = 1; daftar.push({ nama: k.nama, harga: k.harga || 0 }); } });
+        return daftar;
+    }
+    function bukaJasaCepat() {
+        var m = $('#ks-modal'), saran = saranJasa();
+        m.innerHTML = '<div class="ly-modal__in ks-m" role="dialog" aria-modal="true" aria-label="Quick service">' +
+            '<div class="ks-m__head"><b>Quick service</b><button type="button" class="ly-x" data-tutup aria-label="Close">×</button></div>' +
+            '<p class="ly-hint" style="margin:0 0 10px">For work finished while the customer waits. No warranty, and it does not appear in the Service menu.</p>' +
+            '<div class="ks-jasa-f"><label>Service name<input class="ly-in" id="kj-nama" list="kj-saran" maxlength="80" autocomplete="off" placeholder="e.g. Battery replacement, Strap fitting"></label>' +
+            '<datalist id="kj-saran">' + saran.map(function (x) { return '<option value="' + E(x.nama) + '"></option>'; }).join('') + '</datalist>' +
+            '<label>Price (Rp)<input class="ly-in" id="kj-harga" type="number" inputmode="numeric" min="0" step="1000"></label></div>' +
+            '<div class="ly-btns ks-m__aksi"><button type="button" class="ly-btn" data-tutup>Cancel</button><button type="button" class="ly-btn ly-btn--pri" id="kj-ok">Add to cart</button></div></div>';
+        m.hidden = false;
+        var nama = $('#kj-nama'), harga = $('#kj-harga'), terakhir = '';
+        nama.focus();
+        nama.addEventListener('input', function () {
+            var cocok = saran.filter(function (x) { return x.nama.toLowerCase() === nama.value.trim().toLowerCase(); })[0];
+            if (cocok && cocok.harga && (!harga.value || harga.value === terakhir)) { harga.value = cocok.harga; terakhir = String(cocok.harga); }
+        });
+        m.onclick = function (e) {
+            var b = e.target.closest('button');
+            if (e.target === m || (b && b.hasAttribute('data-tutup'))) { m.hidden = true; return; }
+            if (!b || b.id !== 'kj-ok') return;
+            var n = nama.value.replace(/\s+/g, ' ').trim(), h = Math.max(0, Math.round(+harga.value || 0));
+            if (!n) return toast('Enter the service name.', true);
+            if (!(h > 0)) return toast('Enter the service price.', true);
+            kr.items.push({ jenis: 'jasa', id: idAcak(), kode: '', nama: n, qty: 1, maks: 99, harga: h });
+            m.hidden = true; m.onclick = null; toast('Service added to the cart.'); gambarKeranjang();
+        };
+    }
+
     /* ---------- pembayaran ---------- */
     function bukaBayar() {
         if (!kr.items.length) return;
         var tanpaHarga = kr.items.filter(function (i) { return !(i.harga > 0); })[0];
         if (tanpaHarga) return toast('Enter a price for ' + tanpaHarga.nama + '.', true);
-        var tot = totalKr(), hanyaStok = kr.items.every(function (i) { return i.jenis === 'stok'; }), m = $('#ks-modal');
+        var tot = totalKr(), hanyaStok = kr.items.some(function (i) { return i.jenis === 'stok'; }) && kr.items.every(function (i) { return i.jenis !== 'servis'; }), m = $('#ks-modal');
         var kreditList = hanyaStok ? cache.jual.map(function (j) { var k = L.kreditTukar(j); return k && k.sisa > 0 ? { id: j.id, kode: j.kode, nama: j.nama, sisa: k.sisa } : null; }).filter(Boolean) : [];
         var bayar = { metode: 'tunai', dp: false, diterima: tot, jumlahDp: '', batas: L.tambahHari(L.hariIni(), C.jual.batasHari), kredit: kreditList.length ? kreditList[0].id : '', pakaiKredit: false };
         function kreditDipilih() { return bayar.pakaiKredit ? kreditList.filter(function (k) { return k.id === bayar.kredit; })[0] || null : null; }
@@ -605,7 +643,7 @@
     /* simpan: barang stok jadi satu transaksi jual, tiap servis dicatat pelunasannya. Yang sudah tersimpan dikeluarkan dari
        keranjang, supaya bila langkah berikutnya gagal, Bayar diulang tanpa mencatat dua kali */
     function prosesBayar(bayar, btn) {
-        var stokIt = kr.items.filter(function (i) { return i.jenis === 'stok'; }), svIt = kr.items.filter(function (i) { return i.jenis === 'servis'; });
+        var stokIt = kr.items.filter(function (i) { return i.jenis === 'stok' || i.jenis === 'jasa'; }), svIt = kr.items.filter(function (i) { return i.jenis === 'servis'; });
         var nama = $('#ks-nama').value.trim(), hp = $('#ks-hp').value.trim(), tgl = L.hariIni(), tot = totalKr();
         var struk = { waktu: new Date(), nama: nama, hp: hp, items: kr.items.map(function (i) { return { nama: i.nama, kode: i.kode, qty: i.qty, harga: i.harga }; }), total: tot, metode: bayar.metode, dp: bayar.dp,
             dibayar: bayar.dp ? +bayar.jumlahDp || 0 : tot, diterima: !bayar.dp && bayar.metode === 'tunai' ? bayar.diterima : null, kode: [], nota: [] };
@@ -618,13 +656,13 @@
             var bayarBaru = []; if (kreditPakai) bayarBaru.push({ id: idAcak(), tgl: tgl, jumlah: kreditPakai, jenis: 'pelunasan', metode: 'tukar' });
             if (dibayar - kreditPakai > 0) bayarBaru.push({ id: idAcak(), tgl: tgl, jumlah: dibayar - kreditPakai, jenis: bayar.dp ? 'dp' : 'pelunasan', metode: bayar.metode });
             struk.kredit = kreditPakai;
-            var rec = { nama: nama, hp: hp, tgl: tgl, catatan: 'Checkout', items: stokIt.map(function (i) { return { stok_id: i.id, kode: i.kode, nama: i.nama, qty: i.qty, harga: i.harga }; }),
+            var rec = { nama: nama, hp: hp, tgl: tgl, catatan: 'Checkout', items: stokIt.map(function (i) { return i.jenis === 'jasa' ? { jenis: 'jasa', kode: '', nama: i.nama, qty: i.qty, harga: i.harga } : { stok_id: i.id, kode: i.kode, nama: i.nama, qty: i.qty, harga: i.harga }; }),
                 bayar: bayarBaru };
             if (bayar.dp) rec.batas_lunas = bayar.batas; else rec.status = 'selesai';
             return A.simpanJual(rec).then(function (row) {
                 taruh('jual', row); cache.stok = A.daftar('stok'); struk.kode.push(row.kode); struk.jual = row;
                 if (L.hp4(row.hp).length === 4) struk.nota.push(L.urlNotaJual(row.kode));
-                kr.items = kr.items.filter(function (i) { return i.jenis !== 'stok'; });
+                kr.items = kr.items.filter(function (i) { return i.jenis !== 'stok' && i.jenis !== 'jasa'; });
                 if (!kreditPakai) return;
                 /* catat pemakaian kredit di transaksi yang ditukar (supaya sisanya benar) */
                 var asal = salin(asalKredit); asal.kredit = Object.assign({}, asal.kredit, { dipakai: ((asal.kredit || {}).dipakai || []).concat([{ kode: row.kode, jumlah: kreditPakai, tgl: tgl }]) });
@@ -1207,10 +1245,11 @@
             var h = r.harian[x.tgl] = r.harian[x.tgl] || { barang: 0, servis: 0 }; if (h[x.sumber] != null && x.jumlah > 0) h[x.sumber] += x.jumlah;
         });
         /* untung kotor barang: transaksi jual bulan itu (bukan batal), harga deal − modal saat ini */
-        r.untung = 0; r.tanpaModal = 0; r.terjual = 0; var laris = {};
+        r.untung = 0; r.tanpaModal = 0; r.terjual = 0; r.jasa = 0; var laris = {};
         cache.jual.forEach(function (j) {
             if (j.status === 'batal' || String(j.tgl).slice(0, 7) !== bln) return;
             (j.items || []).forEach(function (i) {
+                if (i.jenis === 'jasa') { r.jasa += i.harga * i.qty; return; } /* jasa cepat: dihitung terpisah, bukan unit barang terjual */
                 var s = cariId('stok', i.stok_id), m = s && +s.harga_beli; r.terjual += i.qty;
                 if (m) r.untung += (i.harga - m) * i.qty; else r.tanpaModal++;
                 var k = i.kode + '|' + i.nama, l = laris[k] = laris[k] || { nama: i.nama, kode: i.kode, qty: 0, omzet: 0 }; l.qty += i.qty; l.omzet += i.harga * i.qty;
@@ -1253,7 +1292,7 @@
         app.innerHTML = '<section class="rk"><div class="ly-head"><h1>Monthly report</h1><span class="ly-peran">Owner only</span><input type="month" class="ly-in rk-bln" id="rk-bln" value="' + bulanRk + '"></div>' +
             '<div class="rk-kartu">' +
             '<div class="ly-card"><small>Money in</small><b>' + L.rupiah(r.masuk) + '</b>' + persen(r.masuk, p.masuk) + '<small>' + r.log.filter(function (x) { return x.jumlah > 0; }).length + ' payment(s)</small></div>' +
-            '<div class="ly-card"><small>Item sales</small><b class="rk-c1">' + L.rupiah(r.barang) + '</b>' + persen(r.barang, p.barang) + '<small>' + r.terjual + ' unit(s) sold</small></div>' +
+            '<div class="ly-card"><small>Item sales</small><b class="rk-c1">' + L.rupiah(r.barang) + '</b>' + persen(r.barang, p.barang) + '<small>' + r.terjual + ' unit(s) sold' + (r.jasa ? ' · incl. quick service ' + L.rupiah(r.jasa) : '') + '</small></div>' +
             '<div class="ly-card"><small>Service income</small><b class="rk-c2">' + L.rupiah(r.servis) + '</b>' + persen(r.servis, p.servis) + '<small>' + r.svMasuk.length + ' in · ' + r.svSelesai + ' done</small></div>' +
             (r.sewa || r.deposit ? '<div class="ly-card"><small>Watch rental income</small><b class="rk-c2">' + L.rupiah(r.sewa) + '</b>' + persen(r.sewa, p.sewa) + '<small>net deposits ' + L.rupiah(r.deposit) + '</small></div>' : '') +
             '<div class="ly-card"><small>Gross profit on items</small><b class="rk-c3">' + L.rupiah(r.untung) + '</b>' + persen(r.untung, p.untung) + (r.tanpaModal ? '<small class="ly-warn">' + r.tanpaModal + ' item(s) without a cost price</small>' : '<small>sale price − cost</small>') + '</div>' +
@@ -2067,7 +2106,7 @@
         app.innerHTML = '<section id="jl" class="ly-f"><div class="ly-head"><a class="ly-back" href="#jual">‹ Sales</a></div>' +
             '<div class="ly-head"><h1>' + E(j.nama || 'Walk-in customer') + '</h1>' + chipJual(j) + '</div>' + kodeBaris(j, adaHp ? null : '') +
             '<fieldset class="ly-card"><legend>Items</legend><div class="ly-bayar">' + j.items.map(function (it) {
-                return '<div><span><a href="#stok/' + E(it.stok_id) + '">' + E(it.kode) + '</a> · ' + E(it.nama) + (it.qty > 1 ? ' ×' + it.qty : '') + '</span><b>' + L.rupiah(it.harga * it.qty) + '</b></div>';
+                return '<div><span>' + (it.stok_id ? '<a href="#stok/' + E(it.stok_id) + '">' + E(it.kode) + '</a>' : '<i>Service</i>') + ' · ' + E(it.nama) + (it.qty > 1 ? ' ×' + it.qty : '') + '</span><b>' + L.rupiah(it.harga * it.qty) + '</b></div>';
             }).join('') + '</div>' + (j.catatan ? '<p class="ly-hint" style="margin:8px 0 0">' + E(j.catatan) + '</p>' : '') + '</fieldset>' +
             '<fieldset class="ly-card"><legend>Payments</legend><div class="ly-sum">' +
             '<div><span>Total</span><span>' + L.rupiah(h.total) + '</span></div><div><span>Paid so far</span><span>' + L.rupiah(h.dibayar) + '</span></div>' +

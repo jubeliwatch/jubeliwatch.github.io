@@ -541,7 +541,7 @@
     };
     /* kop dokumen (nota servis & surat perjanjian) */
     L.kopNota = function (judul, kode, cap) {
-        return '<header class="nota-head"><div class="nota-toko"><b>jubeli<span>watch</span></b><p>' + E(C.toko.alamat) + '</p><p>WhatsApp +' + E(C.toko.wa) + ' · jubeliwatch.github.io</p></div>' +
+        return '<header class="nota-head"><div class="nota-toko"><img class="nota-logo" src="logo/jubeli-logo.svg" alt="" width="40" height="40"><div><b>jubeli<span>watch</span></b><p>' + E(C.toko.alamat) + '</p><p>WhatsApp +' + E(C.toko.wa) + ' · jubeliwatch.github.io</p></div></div>' +
             '<div class="nota-id"><h1>' + E(judul) + '</h1><p>' + E(kode) + '</p>' + (cap || '') + '</div></header>';
     };
 
@@ -1423,6 +1423,7 @@
     function terapkanStok(rec, stokList, aktifLama, aktifBaru) {
         var diubah = {};
         (rec.items || []).forEach(function (it, n) {
+            if (it.jenis === 'jasa') return; /* jasa cepat (Kasir): bukan barang stok */
             var s = stokList.filter(function (x) { return x.id === it.stok_id; })[0];
             if (!s) { if (!aktifLama && aktifBaru) throw new Error('Item ' + it.nama + ' is no longer in stock.'); return; }
             s.penjualan = s.penjualan || [];
