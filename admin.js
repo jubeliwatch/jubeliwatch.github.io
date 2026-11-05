@@ -53,6 +53,24 @@
         if (o.href) return '<a class="' + kls + '"' + (o.luar ? ' target="_blank"' : '') + ' href="' + o.href + '">' + isi + '</a>';
         return '<button type="button" class="' + kls + '" id="' + o.id + '">' + isi + '</button>';
     }
+    /* Form edit: di PC (layar lebar) dibagi 2 kolom - kartu isian di kiri, kartu status/pembayaran/aksi + tombol Simpan (menempel saat scroll) di kanan.
+       kananJudul = awal judul kartu (legend) yang pindah ke kanan. Urutan semula dijaga lewat CSS order, jadi di HP tetap satu kolom seperti biasa. */
+    function susunDua(kananJudul) {
+        var root = app.firstElementChild; if (!root) return;
+        var anak = Array.prototype.slice.call(root.children);
+        anak.forEach(function (el, i) { el.style.order = i; });
+        var kartu = anak.filter(function (el) { return el.tagName === 'FIELDSET' && el.classList.contains('ly-card'); });
+        var kanan = kartu.filter(function (el) { var g = el.querySelector('legend'), t = g ? g.textContent : ''; return kananJudul.some(function (k) { return t.indexOf(k) === 0; }); });
+        if (!kanan.length || kanan.length === kartu.length) return;
+        var simpan = anak.filter(function (el) { return el.classList.contains('ly-save'); })[0];
+        var w = document.createElement('div'), a = document.createElement('div'), b = document.createElement('div');
+        w.className = 'ly-dua'; a.className = 'ly-dua__kiri'; b.className = 'ly-dua__kanan';
+        root.insertBefore(w, kartu[0]);
+        kartu.forEach(function (el) { if (kanan.indexOf(el) < 0) a.appendChild(el); });
+        if (simpan) b.appendChild(simpan);
+        kanan.forEach(function (el) { b.appendChild(el); });
+        w.appendChild(a); w.appendChild(b);
+    }
     function kisiAksi(daftar) { return '<div class="ly-aksi">' + daftar.join('') + '</div>'; }
     function owner() { return A.peran() === 'owner'; }
     function setDirty(v) { dirty = v; var d = $('#dirty'); if (d) d.hidden = !v; }
@@ -1391,6 +1409,7 @@
                 '<p class="ly-hint ly-hint--c">The customer page updates about 1 minute after saving.</p></fieldset>') +
 
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="sv-simpan">' + (ed.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
+        susunDua(['Payments', 'Status', 'Internal note', 'Kirim', 'More actions', 'More']);
 
         $$('[data-f]', app).forEach(function (el) {
             var v = s[el.dataset.f];
@@ -1687,6 +1706,7 @@
                         aksi({ id: 'tb-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })])) +
                 '<p class="ly-hint ly-hint--c">The agreement on the website updates about 1 minute after saving.</p></fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="tb-simpan">' + (te.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
+        susunDua(['Persetujuan', 'Kirim']);
         $$('[data-t]', app).forEach(function (el) { var v = t[el.dataset.t]; el.value = v == null ? '' : v; });
         $('#tb-setuju').checked = !!t.disetujui;
         gambarSumTebus(); gambarStatusTebus(); gambarFotoTebus(); setDirty(false);
@@ -1839,6 +1859,7 @@
                     .concat([aksi({ id: 'tp-cetak', ikon: 'cetak', teks: 'Print consignment receipt' }), aksi({ id: 'tp-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })])) +
                 '<p class="ly-hint ly-hint--c">Selling through Checkout and paying the owner are coming soon.</p></fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="tp-simpan">' + (tp.baru ? 'Save &amp; create code' : 'Save changes') + '</button></div></section>';
+        susunDua(['Persetujuan', 'Kirim']);
         $$('[data-t]', app).forEach(function (el) { var v = t[el.dataset.t]; el.value = v == null ? '' : v; });
         $('#tp-setuju').checked = !!t.disetujui;
         gambarSumTitip(); gambarStatusTitip(); gambarFotoTitip(); setDirty(false);
@@ -1998,6 +2019,7 @@
             '<div id="jb-ambil-l"><label class="ly-cek"><input type="checkbox" id="jb-ambil" checked><span>Item taken or shipped now (sale complete)</span></label></div>' +
             '<div class="ly-sum" id="jb-sum"></div></fieldset>' +
             '<div class="ly-save"><button type="button" class="ly-btn ly-btn--pri" id="jb-simpan">Save</button></div></section>';
+        susunDua(['Payments']);
         $('#jb-harga').value = jl.j.items[0].harga || ''; $('#jb-tgl').value = h; $('#jb-batas').value = jl.j.batas_lunas; $('#jb-bayar').value = jl.j.items[0].harga || '';
         function baca() {
             var j = jl.j, it = j.items[0];
@@ -2072,6 +2094,7 @@
             (owner() ? '<fieldset class="ly-card"><legend>More</legend>' + kisiAksi([aksi({ id: 'jl-hapus', ikon: 'hapus', teks: 'Delete sale', kelas: 'ly-akt--del' })]) +
             '<p class="ly-hint ly-hint--c">Delete only for data-entry mistakes; stock is returned. For cancelled orders, use the Cancel buttons so it is recorded.</p></fieldset>' : '') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="jl-simpan">Save changes</button></div></section>';
+        susunDua(['Status', 'Struk', 'WhatsApp', 'Kredit', 'More']);
         if ($('#by-tgl')) { $('#by-tgl').value = L.hariIni(); $('#by-jml').value = h.sisa || ''; $('#jl-batas').value = j.batas_lunas || ''; }
         if ($('#jl-setuju')) $('#jl-setuju').checked = !!j.disetujui;
         gambarBayarJual(); setDirty(false);
@@ -2210,6 +2233,7 @@
             '<fieldset class="ly-card ly-f"><legend>Condition when it leaves</legend><label>Condition notes (scratches, box, extra strap, etc.)<textarea data-w="kondisi_keluar" rows="2"></textarea></label><div id="sw-foto"></div>' +
             '<p class="ly-hint" style="margin:0">Photograph the watch from several sides before handing it over, in case of a dispute.' + (owner() ? ' The ID card photo (optional) is stored only in the owner repo and never appears on the website.' : '') + '</p></fieldset>' +
             '<div class="ly-save"><button type="button" class="ly-btn ly-btn--pri" id="sw-simpan">Save rental</button></div></section>';
+        susunDua(['Condition when it leaves']);
         var el = $('#sw'), w = sw.w;
         $$('[data-w]', el).forEach(function (i) { i.value = w[i.dataset.w] == null ? '' : w[i.dataset.w]; });
         function angka(x) { return Math.max(0, Math.round(+x || 0)); }
@@ -2315,6 +2339,7 @@
             (owner() ? '<fieldset class="ly-card"><legend>More</legend>' + kisiAksi([aksi({ id: 'sw-hapus', ikon: 'hapus', teks: 'Delete rental record', kelas: 'ly-akt--del' })]) +
                 '<p class="ly-hint ly-hint--c">Delete only for data-entry mistakes; photos are deleted too.</p></fieldset>' : '') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="sw-simpan">Save changes</button></div></section>';
+        susunDua(['WhatsApp', 'Watch returned', 'More']);
         $$('[data-w]', $('#sw')).forEach(function (x) { x.value = w[x.dataset.w] || ''; });
         if ($('#by-tgl')) { $('#by-tgl').value = L.hariIni(); $('#by-jml').value = (aktif ? h.kurang : h.masihHutang) || ''; }
         gambarBayarSewa(); gambarFotoSewa(); setDirty(false);
@@ -2735,6 +2760,7 @@
                 .concat(L.diKatalog(s) ? [aksi({ href: E(L.urlUnit(s.kode)), luar: true, ikon: 'lihat', teks: 'View item page' })] : [])
                 .concat(owner() ? [aksi({ id: 'sk-hapus', ikon: 'hapus', teks: 'Delete record', kelas: 'ly-akt--del' })] : [])) + '</fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="sk-simpan">' + (sk.baru ? 'Save stock' : 'Save changes') + '</button></div></section>';
+        susunDua(['Sales', 'Status', 'More']);
         $$('[data-s]', app).forEach(function (el) { var v = s[el.dataset.s]; el.value = v == null ? '' : v; });
         $('#sk-tampil').checked = s.tampil !== false;
         gambarSumStok(); gambarStatusStok(); gambarJual(); gambarFotoStok(); setDirty(false);
@@ -2882,6 +2908,7 @@
                 .concat(terbit ? [aksi({ id: 'ar-link', ikon: 'tautan', teks: 'Share link (WhatsApp)', kelas: 'ly-akt--pri' }), aksi({ id: 'ar-bagikan', ikon: 'kirim', teks: 'Story poster (Instagram / Status)' })] : [])
                 .concat([aksi({ id: 'ar-hapus', ikon: 'hapus', teks: 'Delete article', kelas: 'ly-akt--del' })])) + '</fieldset>') +
             '<div class="ly-save"><span class="ly-dirty" id="dirty" hidden>Not saved</span><button type="button" class="ly-btn ly-btn--pri" id="ar-simpan">Save</button></div></section>';
+        susunDua(['More']);
         $$('[data-a]', app).forEach(function (el) { el.value = a[el.dataset.a] == null ? '' : a[el.dataset.a]; });
         infoArtikel(); gambarAFoto(); setDirty(false);
         var ar = $('#ar');
