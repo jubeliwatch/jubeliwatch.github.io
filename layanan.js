@@ -317,7 +317,7 @@
         if (st === 'selesai') return { judul: 'Notify: ready to collect', ket: 'The watch is done, balance due, opening hours', pesan: L.pesan.selesai(s) };
         if (st === 'diambil') return { judul: 'Thank you & ask for a review', ket: 'Thank-you note + warranty + review link', pesan: L.pesanTindak.servisTerimaKasih(s) };
         var ket = { antri: 'Your watch is now in the queue', dikerjakan: 'Your watch is being worked on', batal: 'Service cancelled' };
-        return { judul: 'Kabari: ' + ({ antri: 'queued', dikerjakan: 'in progress', batal: 'dibatalkan' })[st], ket: ket[st] || 'Progress update', pesan: L.pesan.update(s) };
+        return { judul: 'Notify: ' + ({ antri: 'queued', dikerjakan: 'in progress', batal: 'cancelled' })[st], ket: ket[st] || 'Progress update', pesan: L.pesan.update(s) };
     };
 
     /* ---------- kompres foto di HP sebelum diunggah ---------- */

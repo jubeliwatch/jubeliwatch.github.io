@@ -734,7 +734,7 @@
             '<div class="struk-g"></div><div class="struk-c"><span>Thank you for shopping with us!</span>' + (s.nota.length ? '<span>Online receipt: jubeliwatch.github.io (code + last 4 phone digits)</span>' : '') + '<span>jubeliwatch.github.io</span></div></div>';
     }
     function teksStruk(s) {
-        var t = 'Halo' + (s.nama ? ' Kak ' + s.nama : '') + ', thank you for shopping at ' + C.toko.nama + ' 🙏\n\nStruk ' + s.kode.join(', ') + ' · ' + jamStruk(s.waktu) + '\n';
+        var t = 'Hi' + (s.nama ? ' ' + s.nama : '') + ', thank you for shopping at ' + C.toko.nama + ' 🙏\n\nReceipt ' + s.kode.join(', ') + ' · ' + jamStruk(s.waktu) + '\n';
         t += s.items.map(function (i) { return '• ' + i.nama + (i.qty > 1 ? ' ×' + i.qty : '') + ' – ' + L.rupiah(i.harga * i.qty); }).join('\n');
         t += '\n\nTotal: *' + L.rupiah(s.total) + '*\n' + (s.dp ? 'Deposit (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.dibayar) + '\nSisa: *' + L.rupiah(s.total - s.dibayar) + '*' + (s.jual ? ' (pay the balance by ' + L.tgl(s.jual.batas_lunas) + ')' : '') : (s.kredit ? 'Exchange credit: ' + L.rupiah(s.kredit) + '\n' : '') + (s.total - (s.kredit || 0) > 0 ? 'Paid (' + METODE_STRUK[s.metode].toLowerCase() + '): ' + L.rupiah(s.total - (s.kredit || 0)) + ' ✅' : 'Paid ✅'));
         if (s.nota.length) t += '\n\nOnline receipt:\n' + s.nota.join('\n') + '\n(enter the last 4 digits of your phone number)';
@@ -1634,7 +1634,7 @@
         /* penitipan: hanya untuk data yang sudah tersimpan sebagai Selesai/Diambil */
         var el = $('#sv-titip'), t = !ed.baru && ed.s.tgl_selesai && L.titip(ed.s); if (!el) return;
         if (!t) { el.innerHTML = ''; return; }
-        var sudah = ed.s.items.some(function (i) { return /^Biaya penitipan/i.test(i.nama); });
+        var sudah = ed.s.items.some(function (i) { return /^(Biaya penitipan|Storage fee)/i.test(i.nama); });
         el.innerHTML = '<div class="ly-ingat ly-ingat--info"><span>Done ' + L.tgl(ed.s.tgl_selesai) + ' (' + t.lama + ' days' + (ed.s.status === 'diambil' ? ' until collected' : ' ago') + '). ' +
             (t.hariBiaya ? '<b>Storage fee ' + t.hariBiaya + ' days × ' + L.rupiah(L.biayaTitip()) + ' = ' + L.rupiah(t.biaya) + '</b>.' : 'Free storage until ' + L.tgl(t.batasGratis) + '.') +
             (t.garansiHangus ? ' <b class="ly-telat">Warranty void</b> (over ' + C.garansiHangusHari + ' days).' : '') +
@@ -2649,7 +2649,7 @@
     /* ---------- poster penawaran (gambar 1080×1920, pas untuk Story) + menu Bagikan ---------- */
     function gambarDari(b) { return new Promise(function (ok, gagal) { var u = URL.createObjectURL(b), im = new Image(); im.onload = function () { ok(im); }; im.onerror = function () { gagal(new Error('broken photo')); }; im.src = u; }); }
     function muatGambar(url, cache) {
-        return fetch(url, { cache: cache || 'force-cache' }).then(function (r) { if (!r.ok) throw new Error('foto ' + r.status); return r.blob(); }).then(gambarDari);
+        return fetch(url, { cache: cache || 'force-cache' }).then(function (r) { if (!r.ok) throw new Error('Photo ' + r.status); return r.blob(); }).then(gambarDari);
     }
     /* foto produk untuk poster: dibaca lewat GitHub (langsung benar begitu diunggah, tanpa menunggu situs selesai dibangun);
        bila gagal, dicoba dari situs dengan pengecekan ulang (cache 'force-cache' bisa menyimpan 404 dari sebelum situs selesai dibangun) */
@@ -2769,7 +2769,7 @@
             var im = r[0], logo = r[1][0], kv = kanvasPoster(judul + tag), c = kv.c, jl = barisJudul(c, judul, 2);
             c.font = '600 34px ' + SANS;
             var baris = jasa.slice(0, 5).map(function (n) { return barisTeks(c, '•  ' + n, 980, 1)[0]; });
-            if (jasa.length > 5) baris.push('dan ' + (jasa.length - 5) + ' other jobs');
+            if (jasa.length > 5) baris.push('and ' + (jasa.length - 5) + ' other jobs');
             var fh = tinggiFoto(70 + jl.length * 76 + 48 + (baris.length ? baris.length * 46 + 8 : 0)), sel = selFotoPoster(Math.max(1, daftar.length), fh), ada = 0;
             im.forEach(function (foto, n) { if (foto) { bingkaiFoto(c, foto, sel[n], daftar[n].label); ada++; } });
             if (!ada) fotoKosong(c, r[1][1], sel[0]);
