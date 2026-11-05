@@ -3083,7 +3083,7 @@
             var b = e.target.closest('[data-bagikan-ar]'); if (b) { e.preventDefault(); bagikanArtikel(cariId('artikel', b.dataset.bagikanAr), b); }
         };
     }
-    function artikelKosong() { return { judul: '', slug: '', ringkasan: '', isi: '', tag: 'Care Tips', foto: [], status: 'draf', servis_id: null }; }
+    function artikelKosong() { return { judul: '', slug: '', ringkasan: '', isi: '', tag: 'Care Tips', penulis: '', foto: [], status: 'draf', servis_id: null }; }
     function bukaArtikel(id) {
         ambilCatatan('artikel', id, artikelKosong, function (a) {
             a.foto = a.foto || [];
@@ -3104,6 +3104,8 @@
             '<fieldset class="ly-card ly-f ly-grid"><legend>Title &amp; address</legend>' +
             '<label>Title<input data-a="judul" maxlength="140" placeholder="e.g. Seiko 5 full service"></label>' +
             '<label>Page address<input data-a="slug" pattern="[a-z0-9-]+" autocapitalize="off"><span class="ly-hint" id="ar-url"></span></label>' +
+            '<label>Author<input data-a="penulis" maxlength="60" list="ar-penulis" autocomplete="off" placeholder="Empty = Jubeliwatch"><span class="ly-hint">Shown on the article. Enter the name of the writer (you or a staff member).</span></label>' +
+            '<datalist id="ar-penulis">' + daftarPenulis().map(function (n) { return '<option value="' + E(n) + '">'; }).join('') + '</datalist>' +
             '<div class="ly-row2"><label>Label<input data-a="tag" maxlength="40"></label><label>Status<select data-a="status">' + opsi([['draf', 'Draft'], ['terbit', 'Published']], a.status) + '</select></label></div>' +
             '<label>Summary for Google (max. 160 characters)<textarea data-a="ringkasan" rows="2" maxlength="160"></textarea><span class="ly-hint" id="ar-n"></span></label></fieldset>' +
             '<fieldset class="ly-card ly-f ar-isi"><legend>Article text</legend>' +
@@ -3187,6 +3189,7 @@
             if (confirm('Delete this article? If it is published, its page is removed from the website too.')) { buangDraf(a.id); hapusData('artikel', a, this, A.hapusArtikel, 'Article deleted.'); }
         });
     }
+    function daftarPenulis() { var ada = {}; return cache.artikel.map(function (x) { return String(x.penulis || '').trim(); }).filter(function (n) { return n && !ada[n.toLowerCase()] && (ada[n.toLowerCase()] = 1); }).sort(); }
     function infoArtikel() {
         var a = ae.a, h = ArtikelMd.hitung(a.isi); $('#ar-url').textContent = 'jubeliwatch.github.io/journal-' + (a.slug || '…') + '.html';
         $('#ar-n').textContent = (a.ringkasan || '').length + '/160';
@@ -3221,7 +3224,7 @@
     }
     var KUNCI_DRAF = 'jubeli-draf-artikel:';
     function kunciDraf(id) { return KUNCI_DRAF + (id || 'baru'); }
-    function isiDraf(a) { return { judul: a.judul || '', slug: a.slug || '', tag: a.tag || '', ringkasan: a.ringkasan || '', isi: a.isi || '', status: a.status || 'draf', foto: a.foto || [] }; }
+    function isiDraf(a) { return { judul: a.judul || '', slug: a.slug || '', tag: a.tag || '', penulis: a.penulis || '', ringkasan: a.ringkasan || '', isi: a.isi || '', status: a.status || 'draf', foto: a.foto || [] }; }
     function bacaDraf(id) { try { var d = JSON.parse(localStorage.getItem(kunciDraf(id)) || 'null'); return d && d.a ? d : null; } catch (e) { return null; } }
     function buangDraf(id) { try { localStorage.removeItem(kunciDraf(id)); } catch (e) { /* abaikan */ } }
     function waktuDraf(iso) { var d = new Date(iso); return isNaN(d) ? 'unknown time' : d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
@@ -3241,7 +3244,7 @@
     function isiGambar(el) { $$('img[data-af]', el).forEach(function (img) { var f = ae.a.foto[+img.dataset.af]; if (f) A.fotoArtikel(f).then(function (u) { img.src = u; }, function () { img.alt = 'Photo not found'; }); }); }
     function pratinjau() {
         var a = ae.a; if (!$('#ar-pv')) return;
-        $('#ar-pv').innerHTML = '<p class="ly-muted">' + E(a.tag) + '</p><h2>' + E(a.judul || '(untitled)') + '</h2>' + (a.foto[0] ? '<img data-af="0" alt="" style="border-radius:12px;margin:10px 0">' : '') + ArtikelMd.keHtml(a.isi);
+        $('#ar-pv').innerHTML = '<p class="ly-muted">' + E([a.tag, '✎ ' + (String(a.penulis || '').trim() || 'Jubeliwatch')].filter(Boolean).join(' · ')) + '</p><h2>' + E(a.judul || '(untitled)') + '</h2>' + (a.foto[0] ? '<img data-af="0" alt="" style="border-radius:12px;margin:10px 0">' : '') + ArtikelMd.keHtml(a.isi);
         isiGambar($('#ar-pv'));
     }
     function gambarAFoto() {
@@ -3261,7 +3264,7 @@
     }
     function simpanArtikel() {
         var a = ae.a;
-        a.judul = (a.judul || '').trim(); a.slug = ArtikelMd.slug(a.slug || a.judul);
+        a.judul = (a.judul || '').trim(); a.slug = ArtikelMd.slug(a.slug || a.judul); a.penulis = String(a.penulis || '').replace(/\s+/g, ' ').trim();
         if (!a.judul) return toast('The title is missing.', true);
         if (!a.slug) return toast('The page address is not valid.', true);
         if (a.status === 'terbit') {

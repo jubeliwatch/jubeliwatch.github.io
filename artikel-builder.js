@@ -9,6 +9,9 @@
     function fotoValid(a) { return (Array.isArray(a.foto) ? a.foto : []).filter(function (f) { return f && jalurAman(f.path); }); }
     function bulan(ts) { return new Date(ts || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }); }
     function tanggal(ts) { return new Date(ts || Date.now()).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' }); } /* YYYY-MM-DD */
+    /* penulis artikel (tampil publik); kosong = atas nama toko */
+    var TOKO = 'Jubeliwatch';
+    function penulis(a) { return String(a.penulis || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
     function deskripsi(a) {
         var d = String(a.ringkasan || '').trim() || md.teksPolos(a.isi);
         return d.length > 160 ? d.slice(0, 157).replace(/\s+\S*$/, '') + '…' : d;
@@ -19,8 +22,8 @@
             '@context': 'https://schema.org', '@type': 'Article', headline: a.judul.slice(0, 110), description: desk, inLanguage: 'en',
             datePublished: a.terbit_at || undefined, dateModified: a.updated_at || a.terbit_at || undefined, mainEntityOfPage: url,
             image: foto.length ? foto.map(function (f) { return { '@type': 'ImageObject', contentUrl: situs + f.path, caption: f.alt || a.judul }; }) : undefined,
-            author: { '@type': 'Organization', name: 'Jubeliwatch', url: situs },
-            publisher: { '@type': 'Organization', name: 'Jubeliwatch', url: situs }
+            author: penulis(a) ? { '@type': 'Person', name: penulis(a), worksFor: { '@type': 'Organization', name: TOKO, url: situs } } : { '@type': 'Organization', name: TOKO, url: situs },
+            publisher: { '@type': 'Organization', name: TOKO, url: situs }
         };
         function fig(f, kelas, lazy) {
             return '                <figure class="' + kelas + '"><img src="' + esc(f.path) + '" alt="' + esc(f.alt || a.judul) + '"' + (lazy ? ' loading="lazy"' : '') + ' decoding="async">' +
@@ -33,6 +36,7 @@
             URL: esc(url),
             TAG: esc(a.tag || 'Service Story'),
             BULAN: esc(bulan(a.terbit_at)),
+            PENULIS: esc(penulis(a) ? penulis(a) + ' · ' + TOKO : TOKO),
             /* artikel tanpa foto memakai gambar pratinjau umum artikel, supaya tetap rapi saat dibagikan di WhatsApp */
             OG_IMAGE: foto.length ? '    <meta property="og:image" content="' + esc(situs + foto[0].path) + '">\n    <meta name="twitter:card" content="summary_large_image">'
                 : '    <meta property="og:image" content="' + esc(situs + 'icon-512.png') + '">\n    <meta property="og:image:width" content="512">\n    <meta property="og:image:height" content="512">\n    <meta name="twitter:card" content="summary">',
