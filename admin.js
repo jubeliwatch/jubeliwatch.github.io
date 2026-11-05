@@ -50,6 +50,37 @@
     function owner() { return A.peran() === 'owner'; }
     function setDirty(v) { dirty = v; var d = $('#dirty'); if (d) d.hidden = !v; }
     function opsi(list, cur) { return list.map(function (o) { var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + E(v) + '"' + (String(v) === String(cur == null ? '' : cur) ? ' selected' : '') + '>' + E(t) + '</option>'; }).join(''); }
+    /* pilih pelanggan dari kontak HP. Di browser: Contact Picker API (Chrome Android, HTTPS, dari ketukan). Di aplikasi AYRI POS 1.4.0 ke atas:
+       pemilih kontak bawaan Android lewat jembatan (op pilihKontak), hasilnya datang sebagai peristiwa 'jubeli-kontak'. Hanya satu kontak yang dipilih yang terbaca. */
+    function kontakAplikasi() {
+        var m = /AyriApp\/(\d+)\.(\d+)/.exec(navigator.userAgent);
+        return !!m && adaAplikasi() && typeof window.AyriApp.postMessage === 'function' && (+m[1] > 1 || (+m[1] === 1 && +m[2] >= 4));
+    }
+    function bisaPilihKontak() { return kontakAplikasi() || !!(navigator.contacts && typeof navigator.contacts.select === 'function' && window.ContactsManager); }
+    function tombolKontak(selNama, selHp) {
+        return bisaPilihKontak() ? '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" data-kn="' + E(selNama) + '" data-kh="' + E(selHp) + '">📇 Pick from contacts</button></div>' : '';
+    }
+    function bersihHp(t) { var n = String(t || '').replace(/[^\d+]/g, ''); return n.charAt(0) === '+' ? '+' + n.slice(1).replace(/\+/g, '') : n.replace(/\+/g, ''); }
+    function isiKolom(sel, nilai) { var el = sel && $(sel); if (!el || !nilai) return; el.value = nilai; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    var tombolKontakAktif = null;
+    function terapkanKontak(b, nama, hp) {
+        nama = String(nama || '').trim(); hp = bersihHp(hp);
+        if (!nama && !hp) return toast('That contact has no name or number.', true);
+        isiKolom(b.dataset.kn, nama); isiKolom(b.dataset.kh, hp);
+        toast(hp ? 'Contact selected: ' + (nama || hp) : 'Contact selected, but it has no number. Enter the number.', !hp);
+    }
+    window.addEventListener('jubeli-kontak', function (e) {
+        var d = e.detail || {}, b = tombolKontakAktif; tombolKontakAktif = null;
+        if (d.galat) return toast(d.galat, true);
+        if (b && document.body.contains(b)) terapkanKontak(b, d.nama, d.hp);
+    });
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest && e.target.closest('[data-kn]'); if (!b) return;
+        if (kontakAplikasi()) { tombolKontakAktif = b; kirimKeAplikasi('pilihKontak', {}); return; }
+        navigator.contacts.select(['name', 'tel'], { multiple: false }).then(function (daftar) {
+            var k = daftar && daftar[0]; if (k) terapkanKontak(b, (k.name || [])[0], (k.tel || [])[0]);
+        }).catch(function (err) { if (err && err.name !== 'AbortError') toast('Could not open contacts: ' + (err.message || err), true); });
+    });
     function bukaWa(hp, teks) { window.open(L.waLink(hp, teks), '_blank', 'noopener'); }
     var salin = AYRI_UTIL.salin;
     function idAcak() { var r = new Uint8Array(6); crypto.getRandomValues(r); return Date.now().toString(36) + [].map.call(r, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -1241,7 +1272,7 @@
             '<div class="ly-head"><h1>' + (ed.baru ? 'Watch in' : E(L.namaGitar(s, 'Watch'))) + '</h1>' + (ed.baru ? '' : '<span class="st-chip st-' + s.status + '" id="sv-chip">' + E(L.STATUS[s.status].label) + '</span>') + '</div>' +
             (ed.baru ? '<p class="ly-muted">The service code is created automatically when you save.</p>' : kodeBaris(s)) +
 
-            '<fieldset class="ly-card ly-f"><legend>Customer</legend>' +
+            '<fieldset class="ly-card ly-f"><legend>Customer</legend>' + tombolKontak('[data-f="nama"]', '[data-f="hp"]') +
             '<label>Name<input data-f="nama" autocomplete="off" required></label>' +
             '<label>Phone / WhatsApp<input data-f="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx" required>' + (ed.baru ? '' : '<span class="ly-hint">Changing the phone number changes the 4 digits used to check status; send the link to the customer again.</span>') + '</label></fieldset>' +
 
@@ -1546,7 +1577,7 @@
         app.innerHTML = '<section id="tb" class="ly-f"><div class="ly-head"><a class="ly-back" href="#tebus">‹ Buyback list</a></div>' +
             '<div class="ly-head"><h1>' + (te.baru ? 'Watch bought (buyback right)' : E(L.namaGitar(t, 'Watch'))) + '</h1>' + (te.baru ? '' : chipTebus(t)) + '</div>' +
             (te.baru ? '<p class="ly-muted">The code is created automatically when you save.</p>' : kodeBaris(t)) +
-            '<fieldset class="ly-card ly-f"><legend>Seller</legend>' +
+            '<fieldset class="ly-card ly-f"><legend>Seller</legend>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
             '<label>Name (as on ID card)<input data-t="nama" autocomplete="off" required></label>' +
             '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK (KTP number, optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' +
             '<p class="ly-hint">On the agreement, only the last 4 digits of the NIK and phone are shown.</p></fieldset>' +
@@ -1699,7 +1730,7 @@
         app.innerHTML = '<section id="tp" class="ly-f"><div class="ly-head"><a class="ly-back" href="#titip">‹ Consignment</a></div>' +
             '<div class="ly-head"><h1>' + (tp.baru ? 'Take in a consignment' : E(L.namaGitar(t, 'Watch'))) + '</h1>' + (tp.baru ? '' : chipTitip(t)) + '</div>' +
             (tp.baru ? '<p class="ly-muted">The code is created automatically when you save.</p>' : kodeBaris(t, '')) +
-            '<fieldset class="ly-card ly-f"><legend>Owner</legend>' +
+            '<fieldset class="ly-card ly-f"><legend>Owner</legend>' + tombolKontak('[data-t="nama"]', '[data-t="hp"]') +
             '<label>Name<input data-t="nama" autocomplete="off" required></label>' +
             '<div class="ly-row2"><label>Phone / WhatsApp<input data-t="hp" type="tel" inputmode="tel" autocomplete="off" required></label><label>NIK / KTP number (optional)<input data-t="nik" inputmode="numeric" maxlength="16" autocomplete="off"></label></div>' +
             '<p class="ly-hint">The NIK and ID card photo are optional. If entered, they are stored only in the owner repo and never appear on the website.</p></fieldset>' +
@@ -1878,7 +1909,7 @@
             '<fieldset class="ly-card ly-f"><legend>Item</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · stock ' + s.jumlah + ' · price ' + L.rupiah(s.harga_jual) + '</small></p>' +
             '<div class="ly-row2"><label>Qty<input type="number" inputmode="numeric" min="1" max="' + s.jumlah + '" id="jb-qty" value="1"' + (+s.jumlah > 1 ? '' : ' disabled') + '></label>' +
             '<label>Agreed price per unit (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-harga"></label></div></fieldset>' +
-            '<fieldset class="ly-card ly-f"><legend>Buyer</legend><div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
+            '<fieldset class="ly-card ly-f"><legend>Buyer</legend>' + tombolKontak('#jb-nama', '#jb-hp') + '<div class="ly-row2"><label>Name<input id="jb-nama" autocomplete="off"></label>' +
             '<label>WhatsApp number<input id="jb-hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
             '<p class="ly-hint" style="margin:0">Required for a deposit (receipt and reminders go by WhatsApp). Can be left empty for a sale paid in full.</p></fieldset>' +
             '<fieldset class="ly-card ly-f"><legend>Payment now</legend><div class="ly-row2"><label>Amount paid (Rp)<input type="number" inputmode="numeric" min="0" step="10000" id="jb-bayar"></label>' +
@@ -2068,7 +2099,7 @@
         app.innerHTML = '<section id="sw" class="ly-f"><div class="ly-head"><a class="ly-back" href="#sewa">‹ Watch rental</a></div><div class="ly-head"><h1>New rental</h1></div>' +
             '<fieldset class="ly-card ly-f"><legend>Watch</legend><p style="margin:0"><b>' + E(nama) + '</b><br><small class="ly-muted">' + E(s.kode) + ' · price ' + (s.harga_jual ? L.rupiah(s.harga_jual) : 'not set') + '</small></p></fieldset>' +
             barisWa([['unit', 'Send watch &amp; cost estimate', 'Photo poster + rental estimate, deposit, photo link'], ['ketentuan', 'Send rental terms', 'Send once, not for every watch'], ['formulir', 'Send sign-up form', 'Name, WhatsApp, date & rental length'], ['bayar', 'Send payment info', 'Total upfront + bank account']], 'wa') +
-            '<fieldset class="ly-card ly-f"><legend>Renter</legend><div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
+            '<fieldset class="ly-card ly-f"><legend>Renter</legend>' + tombolKontak('[data-w="nama"]', '[data-w="hp"]') + '<div class="ly-row2"><label>Name<input data-w="nama" autocomplete="off"></label><label>WhatsApp number<input data-w="hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08…"></label></div>' +
             '<p class="ly-hint" style="margin:0">Required: the rental receipt and reminders go by WhatsApp.</p></fieldset>' +
             '<fieldset class="ly-card ly-f"><legend>Rental</legend><div class="ly-row2"><label>Start<input type="date" data-w="tgl_mulai"></label><label>Length (days)<input type="number" inputmode="numeric" min="1" max="' + SWC.maksHari + '" data-w="hari"></label></div>' +
             '<div class="ly-btns" id="sw-cepat">' + [1, 2, 3, 7, 14].map(function (d) { return '<button type="button" class="ly-btn ly-btn--sm" data-hari="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
