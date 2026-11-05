@@ -29,6 +29,13 @@
             return '                <figure class="' + kelas + '"><img src="' + esc(f.path) + '" alt="' + esc(f.alt || a.judul) + '"' + (lazy ? ' loading="lazy"' : '') + ' decoding="async">' +
                 (f.alt ? '<figcaption>' + esc(f.alt) + '</figcaption>' : '') + '</figure>';
         }
+        var diTulisan = []; /* foto yang ditaruh di sela paragraf ([photo n]) tidak diulang di galeri bawah */
+        function fotoKe(n) {
+            var f = (a.foto || [])[n - 1];
+            if (!f || f === foto[0] || !jalurAman(f.path)) return ''; /* foto pertama = sampul di atas */
+            if (diTulisan.indexOf(f) < 0) diTulisan.push(f);
+            return fig(f, 'article-figure', true).trim();
+        }
         var isi = {
             JUDUL: esc(a.judul),
             JUDUL_PENDEK: esc(a.judul.length > 42 ? a.judul.slice(0, 40).replace(/\s+\S*$/, '') + '…' : a.judul),
@@ -42,8 +49,11 @@
                 : '    <meta property="og:image" content="' + esc(situs + 'icon-512.png') + '">\n    <meta property="og:image:width" content="512">\n    <meta property="og:image:height" content="512">\n    <meta name="twitter:card" content="summary">',
             LDJSON: JSON.stringify(ld, null, 2).replace(/</g, '\\u003c'),
             SAMPUL: foto.length ? fig(foto[0], 'article-photo', false) : '',
-            ISI: md.keHtml(a.isi).split('\n').map(function (l) { return '                ' + l; }).join('\n'),
-            GALERI: foto.length > 1 ? '                <div class="article-gallery">\n' + foto.slice(1).map(function (f) { return fig(f, 'article-gallery__item', true); }).join('\n') + '\n                </div>' : '',
+            ISI: md.keHtml(a.isi, { foto: fotoKe }).split('\n').map(function (l) { return '                ' + l; }).join('\n'),
+            GALERI: (function () {
+                var sisa = foto.slice(1).filter(function (f) { return diTulisan.indexOf(f) < 0; });
+                return sisa.length ? '                <div class="article-gallery">\n' + sisa.map(function (f) { return fig(f, 'article-gallery__item', true); }).join('\n') + '\n                </div>' : '';
+            })(),
             WA_TEKS: esc('?text=' + encodeURIComponent('Hello Jubeliwatch, I read the article "' + a.judul + '" and would like advice about my watch'))
         };
         return tpl.replace(/\{\{([A-Z_]+)\}\}/g, function (m, k) { return k in isi ? isi[k] : m; });

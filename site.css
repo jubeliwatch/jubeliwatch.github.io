@@ -172,6 +172,9 @@ footer.site-foot { padding: 48px 0 25px; background: #282820; color: #eae5d9; }
 .article-photo img, .article-gallery img { width: 100%; height: auto; display: block; filter: saturate(.8); }
 .article-photo figcaption, .article-gallery figcaption { font-size: 11px; color: var(--muted); margin-top: 6px; }
 .article-gallery { display: grid; gap: 16px; margin-block: 24px; }
+.article-body .article-figure { margin: 1.75em 0; }
+.article-figure img { width: 100%; height: auto; display: block; filter: saturate(.8); }
+.article-figure figcaption { margin-top: 6px; font-size: 11px; color: var(--muted); text-align: center; }
 .prose { line-height: 1.85; font-size: 15px; }
 .prose h2 { font: 500 26px var(--serif); letter-spacing: -.02em; margin: 34px 0 10px; }
 .prose p { margin: 0 0 16px; color: #3b3a32; }

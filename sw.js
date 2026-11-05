@@ -1,6 +1,6 @@
 /* Service worker Jubeliwatch.
    Naikkan angka VERSION setiap kali Anda mengubah daftar file di bawah. */
-var VERSION = 'jubeli-v3';
+var VERSION = 'jubeli-v4';
 var CORE = ['./', 'index.html', 'home.js', 'collection.html', 'unit.html', 'repair-status.html', 'site.css',
     'theme-dark.css', 'theme.js', 'pwa.js', 'site.js', 'util.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon-48.png', 'favicon.svg', 'logo/jubeli-ikon.svg',
     'admin.html', 'admin.js', 'admin.webmanifest', 'layanan.js', 'layanan.css', 'layanan-config.js', 'artikel-md.js', 'artikel-builder.js'];
