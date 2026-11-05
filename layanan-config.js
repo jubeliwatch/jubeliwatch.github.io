@@ -22,6 +22,7 @@ var JUBELI_LAYANAN = {
         alamat: 'Jln. Jabaru II, Bojong Baru, Pasirkuda, Kota Bogor',
         jam: 'Mon–Sun 12.00–19.00 (Friday from 13.00)',
         wa: '6285795738637',
+        ulasan: '',                    /* Google "leave a review" link (Google Business Profile > Ask for reviews); empty = the thank-you message without a review link */
         rekening: [
             { bank: 'BCA', nomor: '6395460912', atasNama: 'Rio Alam Nur' }
         ]
@@ -37,6 +38,13 @@ var JUBELI_LAYANAN = {
     garansiHangusHari: 30,                 /* warranty is void if not collected within this many days */
     penyimpananLamaHari: 90,               /* after this, the owner is contacted in writing; the watch stays stored */
     pengingatHari: [7, 12],                /* the POS reminds you to send a WhatsApp on these days */
+
+    /* customer follow-up (Today page): a thank-you message with a review request, and a reminder when the service warranty is about to end */
+    tindak: {
+        terimaKasihSetelahHari: 2,         /* send the thank-you from this many days after the watch was collected / the item handed over */
+        terimaKasihBatasHari: 14,          /* after this many days: no more reminders */
+        garansiSebelumHari: 7              /* remind about the service warranty this many days before it ends */
+    },
 
     /* warranty codes: '7h' = 7 days, '1b' = 1 month, '6b' = 6 months, '12b' = 1 year */
     syaratJatuh: 'Valid as long as the watch is not dropped, knocked, or exposed to water beyond its rating.',
