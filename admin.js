@@ -2482,14 +2482,15 @@
     function bagikanLinkArtikel(a) {
         if (a.status !== 'terbit') return toast('Only published articles can be shared.', true);
         var url = urlArtikel(a);
-        /* menu bagikan HP yang universal (WhatsApp, Instagram, Telegram, SMS, dll): lewat aplikasi AYRI POS 1.4+ atau menu bagikan browser; bila tidak ada, tautan disalin */
+        /* menu bagikan HP yang universal (WhatsApp, Instagram, Telegram, SMS, dll): lewat aplikasi AYRI POS 1.4.1+ atau menu bagikan browser; bila tidak ada, tautan disalin */
         if (bisaBagikanTeksApp()) kirimKeAplikasi('bagikanTeks', { teks: a.judul + '\n' + url });
         else if (navigator.share) navigator.share({ title: a.judul, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') salinLink(url); });
         else salinLink(url);
     }
     function bisaBagikanTeksApp() {
-        var m = /AyriApp\/(\d+)\.(\d+)/.exec(navigator.userAgent);
-        return !!m && adaAplikasi() && typeof window.AyriApp.postMessage === 'function' && (+m[1] > 1 || (+m[1] === 1 && +m[2] >= 4));
+        /* op bagikanTeks ada sejak AYRI POS 1.4.1 (1.4.0 hanya punya pilihKontak) */
+        var m = /AyriApp\/(\d+)\.(\d+)(?:\.(\d+))?/.exec(navigator.userAgent);
+        return !!m && adaAplikasi() && typeof window.AyriApp.postMessage === 'function' && (+m[1] > 1 || (+m[1] === 1 && (+m[2] > 4 || (+m[2] === 4 && +(m[3] || 0) >= 1))));
     }
     function salinLink(url) {
         function ok() { toast('Link copied. Paste it into any app.'); }
