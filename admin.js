@@ -40,7 +40,8 @@
         uang: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M5.5 9v.01M18.5 15v.01"/>',
         jam: '<circle cx="12" cy="12" r="9"/><path d="M12 6.5V12l3.5 2"/>',
         lonceng: '<path d="M6 9a6 6 0 0 1 12 0c0 4.5 1.5 6 2 7H4c.5-1 2-2.5 2-7z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
-        amplop: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>'
+        amplop: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+        awas: '<path d="M12 4 3 20h18z"/><path d="M12 10v5M12 17.5v.01"/>'
     };
     function ikon(n) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + IKON[n] + '</svg>'; }
     /* tombol kecil hanya berikon (kirim = bagikan poster/penawaran, tautan = salin/bagikan link); label untuk pembaca layar dan tooltip */
@@ -1381,6 +1382,15 @@
     }
     /* kartu servis (tampilan Daftar): nama pelanggan sebagai judul, baris berikon (tanggal masuk, tagihan, estimasi, penitipan, pengingat) hanya bila relevan,
        lalu tombol utama (pengingat) dan ikon bagikan poster sesuai status */
+    /* kartu daftar seragam (Servis, Jual, Tebus, Titip jual, Sewa, Stok): o = { href, kode (HTML aman), kodeIkon, chip (HTML), judul, sub, foto (alamat gambar | true = kotak kosong),
+       baris: [[kelas, ikon, isi HTML], ...] atau info (HTML <li> jadi), aksi (HTML tombol) } */
+    function kartuIkon(o) {
+        var info = o.info || (o.baris || []).map(function (b) { return baris(b[0], b[1], b[2]); }).join('');
+        var foto = o.foto ? '<span class="sv-foto">' + (o.foto === true ? '' : '<img src="' + E(o.foto) + '" alt="" loading="lazy" decoding="async">') + '</span>' : '';
+        return '<div class="sv-k"><a class="sv-k__a" href="' + o.href + '"><span class="sv-k__top"><span class="sv-kode"><span class="sv-i" aria-hidden="true">' + ikon(o.kodeIkon || 'surat') + '</span>' + o.kode + '</span>' + o.chip + '</span>' +
+            '<span class="sv-k__kepala">' + foto + '<span class="sv-k__teks"><b class="sv-k__nama">' + E(o.judul) + '</b>' + (o.sub ? '<span class="sv-k__gitar">' + E(o.sub) + '</span>' : '') + '</span></span></a>' +
+            (info ? '<ul class="sv-k__info">' + info + '</ul>' : '') + (o.aksi ? '<div class="sv-k__aksi">' + o.aksi + '</div>' : '') + '</div>';
+    }
     function baris(kls, ik, isi) { return '<li' + (kls ? ' class="' + kls + '"' : '') + '><span class="sv-i" aria-hidden="true">' + ikon(ik) + '</span><span>' + isi + '</span></li>'; }
     function kartuServis(s, hari) {
         var h = L.hitung(s, s.items, s.bayar), beres = L.beres(s), telat = s.estimasi && s.estimasi < hari && ['menunggu_dp', 'antri', 'dikerjakan'].indexOf(s.status) > -1;
@@ -1397,10 +1407,7 @@
             if (akhir) info += baris('sv-muted', 'lonceng', 'Diingatkan: ' + L.tgl(akhir));
         }
         var aksi = (t ? '<button type="button" class="ly-btn ' + (perlu ? 'ly-btn--wa' : 'ly-btn--pri') + '" data-ingat="' + E(s.id) + '">' + ikon('amplop') + (perlu ? 'Remind via WhatsApp' : 'Send reminder') + '</button>' : '') + tombolPosterServis(s);
-        return '<div class="sv-k"><a class="sv-k__a" href="#servis/' + E(s.id) + '"><span class="sv-k__top"><span class="sv-kode"><span class="sv-i" aria-hidden="true">' + ikon('surat') + '</span>' + E(s.kode) + '</span>' +
-            '<span class="st-chip st-' + s.status + '">' + E(L.STATUS[s.status].label) + '</span></span>' +
-            '<b class="sv-k__nama">' + E(s.nama || 'No name') + '</b><span class="sv-k__gitar">' + E(L.namaGitar(s, 'Watch')) + '</span></a>' +
-            '<ul class="sv-k__info">' + info + '</ul>' + (aksi ? '<div class="sv-k__aksi">' + aksi + '</div>' : '') + '</div>';
+        return kartuIkon({ href: '#servis/' + E(s.id), kode: E(s.kode), chip: '<span class="st-chip st-' + s.status + '">' + E(L.STATUS[s.status].label) + '</span>', judul: s.nama || 'No name', sub: L.namaGitar(s, 'Watch'), info: info, aksi: aksi });
     }
     /* baris penitipan + tombol pengingat untuk gitar yang sudah selesai (dipakai tampilan lama; kartu Daftar memakai kartuServis) */
     function infoTitip(s, hari) {
@@ -1725,13 +1732,13 @@
         if (filterTb === 'aktif') hasil.sort(function (a, b) { return a.batas_tebus < b.batas_tebus ? -1 : 1; });
         $('#list').innerHTML = hasil.length ? hasil.map(function (t) {
             var i = L.infoTebus(t, hari), akhir = (t.pengingat || []).slice(-1)[0], perluIngat = L.perluIngatTebus(t, hari), ktpHapus = ktp.indexOf(t) > -1;
-            var batas = t.status !== 'aktif' ? '' : i.lewat ? '<span class="ly-telat">Past deadline ' + (-i.sisa) + ' days (' + L.tgl(t.batas_tebus) + ')</span>' : '<span>Deadline ' + L.tgl(t.batas_tebus) + ' (' + i.sisa + ' days left)</span>';
-            return '<div class="ly-item"><a class="ly-item__a" href="#tebus/' + E(t.id) + '"><span class="ly-item__k">' + E(t.kode) + '</span></a>' + chipTebus(t) +
-                '<span class="ly-item__t">' + E(L.namaGitar(t, 'Watch')) + ' · ' + E(t.nama) + '</span>' +
-                '<span class="ly-item__m"><span>Bought ' + L.tgl(t.tgl_beli) + ' ' + L.rupiah(t.harga_beli) + '</span>' + batas +
-                (t.disetujui ? '' : '<span class="ly-warn">No AGREE reply yet</span>') + (akhir ? '<span>Reminded ' + L.tgl(akhir) + '</span>' : '') + '</span>' +
-                (t.status === 'aktif' ? '<span class="ly-item__b"><button type="button" class="ly-btn ly-btn--sm ' + (perluIngat ? 'ly-btn--wa' : '') + '" data-ingat="' + E(t.id) + '">' + (perluIngat ? 'Remind via WhatsApp' : 'Send reminder') + '</button></span>' : '') +
-                (ktpHapus ? '<span class="ly-item__b"><button type="button" class="ly-btn ly-btn--sm ly-btn--del" data-hapusktp="' + E(t.id) + '">Delete ID photo</button></span>' : '') + '</div>';
+            var b = [['', 'tanggal', 'Bought: <b>' + L.tgl(t.tgl_beli) + '</b>'], ['', 'uang', 'Purchase price <b>' + L.rupiah(t.harga_beli) + '</b>']];
+            if (t.status === 'aktif') b.push([i.lewat ? 'sv-bad' : 'sv-warn', 'jam', i.lewat ? 'Past deadline <b>' + (-i.sisa) + ' days</b> (' + L.tgl(t.batas_tebus) + ')' : 'Buyback deadline ' + L.tgl(t.batas_tebus) + ' (' + i.sisa + ' days left)']);
+            if (!t.disetujui) b.push(['sv-warn', 'awas', 'No AGREE reply yet']);
+            if (akhir) b.push(['sv-muted', 'lonceng', 'Diingatkan: ' + L.tgl(akhir)]);
+            var aksi = (t.status === 'aktif' ? '<button type="button" class="ly-btn ' + (perluIngat ? 'ly-btn--wa' : 'ly-btn--pri') + '" data-ingat="' + E(t.id) + '">' + ikon('amplop') + (perluIngat ? 'Remind via WhatsApp' : 'Send reminder') + '</button>' : '') +
+                (ktpHapus ? '<button type="button" class="ly-btn ly-btn--del" data-hapusktp="' + E(t.id) + '">Delete ID photo</button>' : '');
+            return kartuIkon({ href: '#tebus/' + E(t.id), kode: E(t.kode), chip: chipTebus(t), judul: t.nama, sub: L.namaGitar(t, 'Watch'), baris: b, aksi: aksi });
         }).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No records yet. Tap “+ Buy a watch”.') + '</p>';
     }
     function tebusKosong() {
@@ -1883,9 +1890,8 @@
         }).join('');
         var hasil = rows.filter(function (t) { return filterTp === 'semua' ? true : filterTp === 'tinjau' ? L.perluTinjauTitip(t, hari) : t.status === filterTp; });
         $('#list').innerHTML = hasil.length ? hasil.map(function (t) {
-            return '<a class="ly-item" href="#titip/' + E(t.id) + '"><span class="ly-item__k">' + E(t.kode) + '</span>' + chipTitip(t) +
-                '<span class="ly-item__t">' + E(L.namaGitar(t, 'Watch')) + ' · ' + E(t.nama) + '</span>' +
-                '<span class="ly-item__m"><span>In ' + L.tgl(t.tgl_masuk) + (t.status === 'aktif' ? ' (' + L.hariTitip(t, hari) + ' days)' : '') + '</span><span>Price ' + L.rupiah(t.harga_jual) + '</span></span></a>';
+            return kartuIkon({ href: '#titip/' + E(t.id), kode: E(t.kode), chip: chipTitip(t), judul: t.nama, sub: L.namaGitar(t, 'Watch'),
+                baris: [['', 'tanggal', 'In: <b>' + L.tgl(t.tgl_masuk) + '</b>' + (t.status === 'aktif' ? ' (' + L.hariTitip(t, hari) + ' days)' : '')], ['', 'uang', 'Price <b>' + L.rupiah(t.harga_jual) + '</b>']] });
         }).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No consignments yet. Tap “+ Take in a consignment”.') + '</p>';
     }
     function titipKosong() {
@@ -2058,12 +2064,13 @@
             return ok && (!c || [j.kode, j.nama, j.hp, L.namaJual(j)].join(' ').toLowerCase().indexOf(c) > -1);
         });
         $('#list').innerHTML = hasil.length ? hasil.map(function (j) {
-            var h = L.hitungJual(j), i = L.infoJual(j);
-            return '<div class="ly-item"><a class="ly-item__a" href="#jual/' + E(j.id) + '"><span class="ly-item__k">' + E(j.kode) + '</span></a>' + chipJual(j) +
-                '<span class="ly-item__t">' + E(j.nama || 'Walk-in customer') + ' · ' + E(L.namaJual(j)) + '</span>' +
-                '<span class="ly-item__m"><span>' + L.tgl(j.tgl) + '</span><span>Total ' + L.rupiah(h.total) + '</span>' +
-                (j.status === 'dp' ? '<span>Balance ' + L.rupiah(h.sisa) + '</span><span' + (i.lewat ? ' class="ly-telat"' : '') + '>Due ' + L.tgl(j.batas_lunas) + (i.lewat ? ' (overdue)' : i.sisa != null ? ' (' + i.sisa + ' days left)' : '') + '</span>' : '') +
-                (j.status === 'dp' && !j.disetujui && j.hp ? '<span class="ly-warn">No AGREE reply yet</span>' : '') + '</span></div>';
+            var h = L.hitungJual(j), i = L.infoJual(j), b = [['', 'tanggal', 'Date: <b>' + L.tgl(j.tgl) + '</b>'], ['', 'uang', 'Total <b>' + L.rupiah(h.total) + '</b>']];
+            if (j.status === 'dp') {
+                b.push(['sv-bad', 'uang', 'Balance <b>' + L.rupiah(h.sisa) + '</b>']);
+                b.push([i.lewat ? 'sv-bad' : 'sv-warn', 'jam', 'Pay by ' + L.tgl(j.batas_lunas) + (i.lewat ? ' <b>(overdue)</b>' : i.sisa != null ? ' (' + i.sisa + ' days left)' : '')]);
+                if (!j.disetujui && j.hp) b.push(['sv-warn', 'awas', 'No AGREE reply yet']);
+            }
+            return kartuIkon({ href: '#jual/' + E(j.id), kode: E(j.kode), kodeIkon: 'nota', chip: chipJual(j), judul: j.nama || 'Walk-in customer', sub: L.namaJual(j), baris: b });
         }).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No sales yet. Pick an item in Stock and tap “Sell / reserve with deposit”.') + '</p>';
     }
     /* transaksi baru dari satu barang stok (#jual/baru/<id stok>) */
@@ -2262,11 +2269,10 @@
         });
         $('#list').innerHTML = tampil.length ? tampil.map(function (w) {
             var h = L.hitungSewa(w), i = L.infoSewa(w);
-            return '<div class="ly-item"><a class="ly-item__a" href="#sewa/' + E(w.id) + '"><span class="ly-item__k">' + E(w.kode) + '</span></a>' + chipSewa(w) +
-                '<span class="ly-item__t">' + E(w.nama) + ' · ' + E(w.nama_barang) + '</span>' +
-                '<span class="ly-item__m"><span>' + L.tgl(w.tgl_mulai) + ' → ' + L.tgl(L.batasSewa(w)) + '</span><span>Rental ' + L.rupiah(h.tarif) + '</span>' +
-                (w.status === 'aktif' ? '<span>Deposit ' + L.rupiah(h.ditahan) + '</span>' : '') + (h.masihHutang ? '<span class="ly-warn">Short ' + L.rupiah(h.masihHutang) + '</span>' : '') +
-                (i.sisa != null && !i.lewat ? '<span>' + (i.sisa ? i.sisa + ' days left' : 'due back today') + '</span>' : '') + '</span></div>';
+            var b = [['', 'tanggal', L.tgl(w.tgl_mulai) + ' → <b>' + L.tgl(L.batasSewa(w)) + '</b>'], ['', 'uang', 'Rental <b>' + L.rupiah(h.tarif) + '</b>' + (w.status === 'aktif' ? ' · Deposit ' + L.rupiah(h.ditahan) : '')]];
+            if (h.masihHutang) b.push(['sv-bad', 'uang', 'Short <b>' + L.rupiah(h.masihHutang) + '</b>']);
+            if (i.sisa != null && !i.lewat) b.push(['sv-warn', 'jam', i.sisa ? i.sisa + ' days left' : 'Due back today']);
+            return kartuIkon({ href: '#sewa/' + E(w.id), kode: E(w.kode), chip: chipSewa(w), judul: w.nama, sub: w.nama_barang, baris: b });
         }).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No rentals yet. Tap “+ New rental”.') + '</p>';
     }
     /* sewa baru: pilih unit (jika belum), lalu isi formulir (#sewa/baru/<id stok>) */
@@ -2505,7 +2511,7 @@
             (L.diKatalog(s) ? tombolIkon('tautan-sk', s.id, 'tautan', 'Share item link') : '') +
             (adaStok(s) && s.harga_jual ? tombolIkon('tawar', s.id, 'kirim', 'Share poster & offer') : '') +
             (bisaPosterSold(s) ? tombolIkon('sold', s.id, 'kirim', 'Share SOLD poster') : '');
-        return b ? '<span class="ly-item__b">' + b + '</span>' : '';
+        return b;
     }
     function daftarStok() {
         app.innerHTML = '<section><div class="ly-head"><h1>Stock</h1><a class="ly-btn" href="#opname">Stocktake</a><a class="ly-btn ly-btn--pri" href="#stok/baru">+ Add stock</a></div>' +
@@ -2515,6 +2521,8 @@
             '<div class="ly-filter" id="filter"></div><div class="ly-list" id="list"></div></section>';
         $('#cari').value = cariSk;
         $('#cari').addEventListener('input', function () { cariSk = this.value; gambarDaftarStok(); });
+        /* foto kecil di kartu belum terbit di situs (±1 menit setelah diunggah): sembunyikan, jangan tampilkan ikon gambar rusak */
+        $('#list').addEventListener('error', function (e) { if (e.target && e.target.tagName === 'IMG' && e.target.closest('.sv-foto')) e.target.hidden = true; }, true);
         $('#filter').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filterSk = b.dataset.f; gambarDaftarStok(); } });
         $('#list').addEventListener('click', function (e) { var sb = e.target.closest('[data-sewa]'); if (sb) { e.preventDefault(); pindah('#sewa/baru/' + sb.dataset.sewa); return; } var b = e.target.closest('[data-tawar]'); if (b) { e.preventDefault(); bagikanStok(cariId('stok', b.dataset.tawar), b); return; } var so = e.target.closest('[data-sold]'); if (so) { e.preventDefault(); bagikanTerjual(cariId('stok', so.dataset.sold), so); return; } var tl = e.target.closest('[data-tautan-sk]'); if (tl) { e.preventDefault(); var st = cariId('stok', tl.dataset.tautanSk); bagikanTautan(L.judulStok(st), L.urlUnit(st.kode)); } });
         gambarDaftarStok();
@@ -2551,15 +2559,14 @@
             var ok = filterSk === 'semua' ? true : filterSk === 'terjual' ? (s.penjualan || []).length > 0 : filterSk === 'tersedia' ? adaStok(s) : adaStok(s) && kelStok(s) === filterSk;
             return ok && (!c || [s.kode, s.nama, s.sub, s.arloji_jenis, s.arloji_merk, s.warna, s.no_seri, s.deskripsi].join(' ').toLowerCase().indexOf(c) > -1);
         });
-        $('#list').innerHTML = hasil.length ? hasil.map(function (s) {
-            var u = L.untungStok(s), lama = L.hariAntara(s.tgl_masuk, hari);
-            return '<div class="ly-item"><a class="ly-item__a" href="#stok/' + E(s.id) + '"><span class="ly-item__k">' + E(s.kode) + (L.diKatalog(s) ? ' 🌐' : '') + '</span></a>' + chipStok(s) +
-                '<span class="ly-item__t">' + E(L.jenisStok(s)) + ' · ' + E(L.namaStok(s)) + (s.warna ? ' · ' + E(s.warna) : '') + '</span>' +
-                '<span class="ly-item__m">' + (owner() ? '<span>Cost ' + L.rupiah(s.harga_beli) + '</span>' : '') + '<span>Price ' + (s.harga_jual ? L.rupiah(s.harga_jual) : '<span class="ly-warn">not set</span>') + '</span>' +
-                (adaStok(s) ? '<span>Stock ' + s.jumlah + '</span><span' + (lama > 90 ? ' class="ly-telat"' : '') + '>In ' + (lama > 0 ? lama + ' days ago' : 'today') + '</span>' : '') +
-                (u.unitTerjual ? '<span>Sold ' + u.unitTerjual + (owner() ? ' · profit ' + L.rupiah(u.untung) : '') + '</span>' : '') + '</span>' +
-                tombolKartuStok(s) + '</div>';
-        }).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No stock yet. Tap “+ Add stock”.') + '</p>';
+        function kartu(s) {
+            var u = L.untungStok(s), lama = L.hariAntara(s.tgl_masuk, hari), f = (s.foto || []).filter(function (x) { return x.repo === 'publik'; })[0], ada = adaStok(s), b = [];
+            b.push(s.harga_jual > 0 ? ['', 'uang', 'Price <b>' + L.rupiah(s.harga_jual) + '</b>' + (ada ? ' · Stock <b>' + s.jumlah + '</b>' : '')] : ['sv-warn', 'uang', 'Selling price not set' + (ada ? ' · Stock <b>' + s.jumlah + '</b>' : '')]);
+            b.push([ada && lama > 90 ? 'sv-warn' : 'sv-muted', 'tanggal', (owner() ? 'Cost ' + L.rupiah(s.harga_beli) + ' · ' : '') + (ada ? 'In ' + (lama > 0 ? lama + ' days ago' : 'today') : 'In ' + L.tgl(s.tgl_masuk))]);
+            if (u.unitTerjual) b.push(['sv-ok', 'uang', 'Sold ' + u.unitTerjual + (owner() ? ' · profit ' + L.rupiah(u.untung) : '')]);
+            return kartuIkon({ href: '#stok/' + E(s.id), kode: E(s.kode) + (L.diKatalog(s) ? ' 🌐' : ''), kodeIkon: 'stok', chip: chipStok(s), judul: L.namaStok(s), sub: L.jenisStok(s) + (s.warna ? ' · ' + s.warna : ''), foto: f ? (f.thumb_path || f.path) : true, baris: b, aksi: tombolKartuStok(s) });
+        }
+        $('#list').innerHTML = hasil.length ? hasil.map(kartu).join('') : '<p class="ly-kosong">' + (rows.length ? 'Nothing in this category.' : 'No stock yet. Tap “+ Add stock”.') + '</p>';
     }
     function teksTawar(s) {
         var judul = L.judulStok(s);
