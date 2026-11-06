@@ -77,7 +77,10 @@ test('halaman admin: tanpa skrip/handler inline, CSP ketat, koneksi hanya ke sit
     assert.deepEqual(arahan['script-src'], ["'self'"], 'skrip hanya dari situs sendiri (tanpa unsafe-inline / unsafe-eval)');
     assert.deepEqual(arahan['object-src'], ["'none'"]);
     assert.deepEqual(arahan['base-uri'], ["'self'"]);
-    for (const host of arahan['connect-src']) assert.ok(["'self'", 'https://api.github.com', 'https://jubeliwatch.github.io'].includes(host), 'connect-src tidak boleh mengizinkan ' + host);
+    const aiAsal = (/ai: \{ url: '(https:\/\/[^']+)' \}/.exec(baca('layanan-config.js')) || [])[1];
+    const diizinkan = ["'self'", 'https://api.github.com', 'https://jubeliwatch.github.io'].concat(aiAsal ? [new URL(aiAsal).origin] : []);
+    for (const host of arahan['connect-src']) assert.ok(diizinkan.includes(host), 'connect-src tidak boleh mengizinkan ' + host);
+    if (aiAsal) assert.ok(arahan['connect-src'].includes(new URL(aiAsal).origin), 'alamat Worker AI di layanan-config.js harus ada di connect-src, kalau tidak browser memblokir panggilannya');
     assert.equal(skripDi(teks).filter((s) => !s.src).length, 0, 'tidak boleh ada <script> inline di admin.html');
     assert.ok(!/\son[a-z]+\s*=/i.test(teks.replace(/<!--[\s\S]*?-->/g, '')), 'tidak boleh ada atribut onclick= dsb. di admin.html');
     assert.ok(!/javascript:/i.test(teks));
