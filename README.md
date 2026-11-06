@@ -61,6 +61,17 @@ Edit `layanan-config.js` (on GitHub or here): shop name, address, opening hours,
 
 Watch rental is built in but hidden. To turn it on, set `SEWA_AKTIF = true` near the top of `admin.js` and add the `#sewa` link back to the menu in `admin.html`.
 
+## AI writer (optional)
+The POS can draft stock descriptions (it also looks at up to 3 uploaded photos) and journal articles. It goes through a tiny Cloudflare Worker, so the AI key never touches the website. Until a Worker address is set in `layanan-config.js` (`ai: { url }`), the "✨ Write … with AI" buttons stay hidden.
+
+1. Create a free Groq key at <https://console.groq.com> (API Keys → Create). Use a key made only for Jubeliwatch.
+2. At <https://dash.cloudflare.com> → Workers & Pages → Create → Create Worker, name it `jubeli-ai`, Deploy, then Edit code, replace everything with `ai-worker/worker.mjs`, Deploy.
+3. Worker → Settings → Variables and Secrets: `GROQ_KEY` (Secret, the Groq key), `REPO_CEK` (Text) = `jubeliwatch/jubeliwatch-shop-data`, `ORIGIN` (Text) = `https://jubeliwatch.github.io`. Optional backup: `GEMINI_KEY` (Secret) from <https://aistudio.google.com>.
+4. Copy the Worker address (`https://jubeli-ai.<your-name>.workers.dev`) into `ai: { url: '…' }` in `layanan-config.js`, save, wait a minute, reload the POS.
+5. Try it: Stock → open an item → "✨ Write the description with AI"; Journal → fill the title → "✨ Write a draft with AI". Always check the facts before saving or publishing.
+
+Only watch data and article material are sent (never customer names, phone numbers, ID numbers or serial numbers), and only POS devices whose token can open `jubeliwatch-shop-data` are served. If the Worker says the quota is used up, wait a moment. If Gemini says "User location is not supported", set Worker → Settings → Runtime → Placement to Smart.
+
 ## Development
 - Tests: `node --test` (Node 22+, no packages). They load the real code against an in-memory fake GitHub.
 - Local demo with sample data, no real data touched: `node tests/server-admin.js 8783`, then open <http://127.0.0.1:8783/admin.html> with the test token `tok-owner` and any 6-digit PIN.

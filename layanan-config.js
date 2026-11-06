@@ -17,6 +17,9 @@ var JUBELI_LAYANAN = {
         cabang: 'main'
     },
 
+    /* AI writer (stock descriptions & journal drafts) through a Cloudflare Worker (ai-worker/). Empty = the AI buttons are hidden.
+       Put the Worker address here, e.g. 'https://jubeli-ai.yourname.workers.dev'. The AI key is NEVER written here. */
+    ai: { url: '' },
     toko: {
         nama: 'Jubeliwatch',
         alamat: 'Jln. Jabaru II, Bojong Baru, Pasirkuda, Kota Bogor',

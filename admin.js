@@ -2940,7 +2940,8 @@
             '<label>Serial number (not shown on the website)<input data-s="no_seri" autocapitalize="characters"></label></div>' +
             '<div id="sk-aks"' + (aks ? '' : ' hidden') + ' class="ly-f"><div class="ly-row2"><label>Category<select data-s="sub">' + opsi(subs, s.sub) + '</select></label><label>Product name<input data-s="nama" placeholder="e.g. 20 mm leather strap, brown"></label></div></div>' +
             '<label><span id="sk-lbl-warna">' + (aks ? LBL_VARIAN : 'Dial colour') + '</span><input data-s="warna" placeholder="' + (aks ? PH_VARIAN : 'e.g. Silver sunburst') + '"></label>' +
-            '<label>Description (condition, specs, inclusions)<textarea data-s="deskripsi" rows="3" placeholder="e.g. 36 mm case, recently serviced, box and papers"></textarea></label></fieldset>' +
+            '<label>Description (condition, specs, inclusions)<textarea data-s="deskripsi" rows="3" placeholder="e.g. 36 mm case, recently serviced, box and papers"></textarea></label>' +
+            (L.ai.aktif ? '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" id="sk-ai">✨ Write the description with AI</button></div><p class="ly-hint" style="margin:0">Write a short note first (e.g. small scratch on the bezel, box included). The AI also looks at the photos already uploaded (max. 3) and adds the model specifications (case size, material, movement). Those come from the AI\'s own knowledge, so check them against the watch before saving.</p>' : '') + '</fieldset>' +
             '<fieldset class="ly-card ly-f ly-grid"><legend>Price &amp; quantity</legend>' +
             '<div class="ly-row2">' + (owner() ? '<label>Cost / purchase price per unit (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-s="harga_beli"></label>' : '') + '<label>Selling price (Rp)<input type="text" inputmode="numeric" autocomplete="off" data-rp data-s="harga_jual"></label></div>' +
             '<div class="ly-row2"><label>Quantity in stock<input type="number" inputmode="numeric" min="0" data-s="jumlah"></label><label>Date in (not shown on the website)<input type="date" data-s="tgl_masuk"></label></div>' +
@@ -2994,6 +2995,7 @@
         });
         pilihFoto($('#sk-foto'), function (tahap, files) { antriFoto(sk.antri, files, {}, gambarFotoStok); });
         $('#sk-simpan').addEventListener('click', simpanStok);
+        if ($('#sk-ai')) $('#sk-ai').addEventListener('click', function () { tulisDeskripsiAi(this); });
         if (!sk.baru && owner()) $('#sk-hapus').addEventListener('click', hapusStok);
     }
     function gambarSumStok() {
@@ -3023,6 +3025,46 @@
         var el = $('#sk-foto'); if (!el) return;
         el.innerHTML = grupFoto('Item photos', null, sk.s.foto, sk.antri, false);
         L.isiFoto(el, sk.s, A.fotoAdmin);
+    }
+    /* AI: draft description from the item data + notes + item photos (max. 3: already uploaded first, then newly picked) */
+    function keJpegAi(im) {
+        var k = Math.min(1, 896 / Math.max(im.width, im.height)), cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(im.width * k)); cv.height = Math.max(1, Math.round(im.height * k));
+        cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+        return cv.toDataURL('image/jpeg', 0.8);
+    }
+    function fotoUntukAi(s) {
+        var sumber = (s.foto || []).filter(function (f) { return f.repo === 'publik'; }).slice(0, 3).map(function (f) { return function () { return muatFotoPoster(s, f); }; });
+        (sk && sk.antri || []).forEach(function (q) { if (q.hasil && sumber.length < 3) sumber.push(function () { return gambarDari(q.hasil.kecil); }); });
+        return Promise.all(sumber.map(function (ambil) { return ambil().then(keJpegAi).catch(function () { return null; }); })).then(function (l) { return l.filter(Boolean); });
+    }
+    function tulisDeskripsiAi(b) {
+        var s = sk.s, ada = String(s.deskripsi || '').trim();
+        sibuk(b, true, 'AI is looking at the photos…');
+        fotoUntukAi(s).then(function (gambar) {
+            var minta = L.ai.deskripsi(s, gambar.length); minta.gambar = gambar;
+            b.textContent = 'AI is writing…';
+            return A.ai(minta);
+        }).then(function (teks) {
+            sibuk(b, false);
+            if (ada && !confirm('Replace the description with the AI text?\n\n' + teks)) return;
+            s.deskripsi = teks; $('[data-s="deskripsi"]').value = teks; setDirty(true);
+            toast(A.ai.catatan || 'Draft from the AI. Check it and edit if needed, then Save.', !!A.ai.catatan);
+        }).catch(function (e) { sibuk(b, false); gagal(e); });
+    }
+    /* AI: draft article body + summary from the title, the material in the text box, and the service case (no customer data) */
+    function tulisArtikelAi(b) {
+        var a = ae.a;
+        if (!String(a.judul || '').trim()) return toast('Enter the article title first.', true);
+        sibuk(b, true, 'AI is writing…');
+        A.ai(L.ai.artikel(a, ae.servis)).then(function (teks) {
+            sibuk(b, false);
+            var h = L.ai.pisahArtikel(teks);
+            if (String(a.isi || '').trim() && !confirm('Replace the article text with the AI draft? The current text was used as material.')) return;
+            a.isi = h.isi; $('[data-a="isi"]').value = h.isi;
+            if (h.ringkasan && (!String(a.ringkasan || '').trim() || confirm('Replace the Google summary with:\n' + h.ringkasan))) { a.ringkasan = h.ringkasan; $('[data-a="ringkasan"]').value = h.ringkasan; }
+            setDirty(true); infoArtikel(); toast('Draft from the AI. Read it and adjust, then Save.');
+        }).catch(function (e) { sibuk(b, false); gagal(e); });
     }
     function simpanStok() {
         var s = sk.s, asli = !sk.baru && cariId('stok', s.id), aktifJ = asli ? jualAktifStok(s) : [];
@@ -3115,6 +3157,7 @@
             '<div class="ar-tulis" id="ar-tulis"><textarea data-a="isi" rows="16" aria-label="Article text" placeholder="Start writing here.&#10;&#10;## Section heading&#10;Opening paragraph…&#10;&#10;- first point&#10;- second point"></textarea><div class="ly-prev" id="ar-pv" hidden aria-label="Article preview"></div></div>' +
             '<div class="ar-kaki"><span id="ar-kata"></span><span id="ar-draf" aria-live="polite"></span></div>' +
             '<p class="ly-hint" style="margin:0">Select some text and press a button above, or type directly: <b>## section heading</b>, <b>- bullet</b>, <b>**bold**</b>, <b>_italic_</b>, <b>[text](https://address)</b>. A blank line = new paragraph.</p>' +
+            (L.ai.aktif ? '<div class="ly-btns"><button type="button" class="ly-btn ly-btn--sm" id="ar-ai">✨ Write a draft with AI</button></div><p class="ly-hint" style="margin:0">The AI uses the title and the text in the box above as material. Check the facts before publishing.</p>' : '') + '</fieldset>' +
             '<fieldset class="ly-card"><legend>Photos</legend><div class="ly-afoto" id="ar-foto"></div><div id="ar-pick"></div>' +
             '<div class="ly-btns" style="margin-top:10px"><label class="ly-btn ly-btn--sm ly-file">+ Upload photo<input type="file" accept="image/*" multiple id="ar-file"></label></div>' +
             '<p class="ly-hint" style="margin-top:8px">Photo 1 is the cover at the top of the article. Other photos appear below the article, except those placed inside the text with the photo button (marker <b>[photo 2]</b> and so on). Add a short caption to each photo (it helps Google). Make sure there are no faces, receipts, or watch serial numbers. Journal photos are public.</p></fieldset>' +
@@ -3190,6 +3233,7 @@
             unggahFotoAr(files).then(function () { toast('Photo uploaded. Add its caption, then Save.'); }, gagal);
         });
         $('#ar-simpan').addEventListener('click', simpanArtikel);
+        if ($('#ar-ai')) $('#ar-ai').addEventListener('click', function () { tulisArtikelAi(this); });
         if (!ae.baru) $('#ar-hapus').addEventListener('click', function () {
             if (confirm('Delete this article? If it is published, its page is removed from the website too.')) { buangDraf(a.id); hapusData('artikel', a, this, A.hapusArtikel, 'Article deleted.'); }
         });

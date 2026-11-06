@@ -1859,6 +1859,62 @@
         return mengirim;
     }
     function pesanError(e) { return (e && e.message) || String(e); }
+    /* ---------- AI writer (through a small Cloudflare Worker, see ai-worker/) ----------
+       Only watch / article material is sent: never customer names, phone numbers, ID numbers, or serial numbers. The result is a draft the admin reviews. */
+    L.ai = {
+        aktif: !!(C.ai && C.ai.url),
+        /* adaFoto = number of photos sent along (the model can read images) */
+        deskripsi: function (s, adaFoto) {
+            var aks = s.kategori === 'aksesoris', t = aks ? null : C.tingkatKondisi.filter(function (x) { return x[0] === s.tingkat; })[0];
+            var data = aks ? ['Category: ' + (s.sub || 'Accessories'), 'Name: ' + (s.nama || '-'), s.warna ? 'Variant: ' + s.warna : '', 'Condition: new']
+                : ['Item: ' + L.judulStok(s), s.arloji_jenis ? 'Movement: ' + s.arloji_jenis : '', s.arloji_merk ? 'Brand / model: ' + s.arloji_merk : '', s.warna ? 'Dial colour: ' + s.warna : '', s.asal ? 'Origin: ' + s.asal : '',
+                    'Condition: ' + (s.kondisi === 'bekas' ? 'pre-owned' + (t ? ', grade ' + t[1] + ' (' + t[2] + ')' : '') : 'new')];
+            return {
+                sistem: 'You write product descriptions for the online collection of ' + C.toko.nama + ', a watch shop in Bogor, Indonesia. Friendly, polite, honest English. ' +
+                    'There are three sources. (1) FACTS ABOUT THIS UNIT: condition, year, origin, completeness (box, papers), scratches, bonuses: only from the seller data and notes; never invent facts about this unit that are not mentioned. ' +
+                    '(2) PHOTOS (if attached): mention only what is CLEARLY VISIBLE, such as dial colour, case shape, crown, bezel, strap or bracelet, logo, signs of wear; never guess what is not clearly visible. ' +
+                    '(3) MODEL SPECIFICATIONS: you may use what you know about this brand and model (case size, material, movement, crystal, water resistance, etc.), but ONLY what you are sure is correct; if unsure, skip it, never guess numbers, years, or names. ' +
+                    'State specifications plainly, without "usually" or "typically". If the seller notes contradict the photos or your knowledge, trust the seller notes. ' +
+                    'Never mention a price, phone number, or address. No hashtags, at most two emojis. Write the content directly, with no title and no introduction.',
+                prompt: 'Item data:\n' + data.filter(Boolean).map(function (x) { return '- ' + x; }).join('\n') +
+                    '\n\nSeller notes (the main facts, use them as they are):\n' + (String(s.deskripsi || '').trim() || '(none)') +
+                    (adaFoto ? '\n\n' + adaFoto + ' photo(s) of this item are attached. Use them to mention clearly visible things (dial colour, case, strap, signs of wear).' : '') +
+                    (aks ? '\n\nWrite a description of 3 to 4 short sentences about its use and strengths. End with an invitation to see it in the shop.'
+                        : '\n\nAnswer format:\n1) One short paragraph (2 to 3 sentences) about the watch and the condition of this unit' + (s.kondisi === 'bekas' ? ' as it is, matching the grade and the notes' + (adaFoto ? ', and the photos' : '') : '') + '.\n' +
+                          '2) A line "Specifications:" followed by 4 to 6 points, one per line, each starting with "- " (e.g. case size and material, movement, crystal, water resistance, strap), only what you are sure of.\n' +
+                          '3) One closing sentence inviting the reader to see it in the shop.'),
+                maks: aks ? 600 : 900
+            };
+        },
+        /* journal article: "SUMMARY: ..." on the first line, then the body */
+        artikel: function (a, servis) {
+            var kasus = servis ? ['Watch: ' + L.namaGitar(servis, 'watch'), servis.keluhan ? 'Complaint: ' + servis.keluhan : '',
+                (servis.items || []).length ? 'Work done: ' + servis.items.map(function (i) { return i.nama; }).join(', ') : ''].filter(Boolean).join('\n') : '';
+            return {
+                sistem: 'You write blog articles for the website of ' + C.toko.nama + ', a watch shop and service workshop in Bogor, Indonesia. Clear, friendly English for watch owners who are not experts. ' +
+                    'Be honest: never invent case data, brands, prices, or warranty promises that are not in the material. Never mention customer names or phone numbers. ' +
+                    'Answer format: the first line is "SUMMARY: " followed by a summary of at most 150 characters for Google, then one blank line, then the article body. ' +
+                    'The body uses subheadings "## ...", bullet points "- ...", and **bold** where useful, with no main title (the title already exists). Length 350 to 600 words. ' +
+                    'End with an invitation to consult or book a service at ' + C.toko.nama + ' in Bogor through WhatsApp.',
+                prompt: 'Article title: ' + (a.judul || '') + (a.tag ? '\nLabel: ' + a.tag : '') + (kasus ? '\n\nService case at the shop (no customer data):\n' + kasus : '') +
+                    '\n\nMaterial / notes from the shop:\n' + (String(a.isi || '').trim() || '(none, write from safe general knowledge about the topic in the title)'),
+                maks: 2048
+            };
+        },
+        pisahArtikel: function (teks) {
+            var m = /^\s*(?:SUMMARY|RINGKASAN):\s*(.*)\n/i.exec(String(teks || ''));
+            return m ? { ringkasan: m[1].trim().slice(0, 160), isi: teks.slice(m.index + m[0].length).replace(/^\s+/, '') } : { ringkasan: '', isi: String(teks || '').trim() };
+        }
+    };
+    L.api.ai = function (minta) {
+        if (!C.ai || !C.ai.url) return Promise.reject(new Error('AI is not enabled. See the AI section of the setup guide.'));
+        if (!token) return Promise.reject(new Error('The POS is locked. Enter the PIN first.'));
+        return fetch(C.ai.url, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(minta) })
+            .catch(function () { throw new Error('Could not reach the AI. Check your internet.'); })
+            .then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok || !d.teks) throw new Error(d.error || 'The AI failed (' + r.status + ').'); L.api.ai.catatan = d.catatan || ''; return d.teks; });
+            });
+    };
     L.api.muat = function () {
         return siapkanLokal().then(kirimAntrian).then(muatOnline).then(function (d) {
             adaMemori = true; offline = false; simpanSalinan(); kabari(); return d;

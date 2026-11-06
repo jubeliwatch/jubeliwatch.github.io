@@ -49,6 +49,7 @@ http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     if (u.pathname === '/__putus') { putus = u.searchParams.get('v') === '1'; res.end('putus=' + putus); return; }
     if (u.pathname === '/mock-gh.js') { res.writeHead(200, { 'Content-Type': TIPE['.js'] }); res.end(MOCK); return; }
+    if (u.pathname === '/__ai') { res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }); res.end(JSON.stringify({ teks: 'SUMMARY: A short demo summary.\n\n## Demo section\nDraft text from the fake AI.' })); return; }
     if (u.pathname === '/__log') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(gh.log.slice(-40))); return; }
     if (u.pathname.startsWith('/__gh/')) {
         const rest = u.pathname.slice(6) + u.search, tok = String(req.headers.authorization || '').replace(/^Bearer /, '');
